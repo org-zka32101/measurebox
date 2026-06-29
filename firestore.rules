@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Ust projects collection
+    match /users/{userId}/projects/{projectId} {
+      // Allow guest user to read, write, delete their own projects
+      allow read, write, delete: if request.auth.uid == 'guest-user' || request.auth.uid == userId;
+    }
+
+    // Users' measurements
+    match /users/{userId}/projects/{projectId}/measurements/{measurementId} {
+      allow read, write, delete: if request.auth.uid == 'guest-user' || request.auth.uid == userId;
+    }
+
+    // Users' comparisons
+    match /users/{userId}/projects/{projectId}/comparisons/{comparisonId} {
+      allow read, write, delete: if request.auth.uid == 'guest-user' || request.auth.uid == userId;
+    }
+
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

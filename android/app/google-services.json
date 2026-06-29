@@ -1,0 +1,86 @@
+{
+  "project_info": {
+    "project_number": "337578395985",
+    "project_id": "petit-works-utility",
+    "storage_bucket": "petit-works-utility.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:337578395985:android:78a4a0f370e9a7ffd0ab70",
+        "android_client_info": {
+          "package_name": "com.petitworksapps.cometrueaifortune"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlmBnBnTfWRvkf2pLb70oiImskDzoiT-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:337578395985:android:2aa67ff3da58aefad0ab70",
+        "android_client_info": {
+          "package_name": "com.petitworksapps.japanexplorer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlmBnBnTfWRvkf2pLb70oiImskDzoiT-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:337578395985:android:5d15746de936763dd0ab70",
+        "android_client_info": {
+          "package_name": "com.petitworksapps.lifemanagement"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlmBnBnTfWRvkf2pLb70oiImskDzoiT-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:337578395985:android:93590342ddabcd6dd0ab70",
+        "android_client_info": {
+          "package_name": "com.petitworksapps.measuretracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlmBnBnTfWRvkf2pLb70oiImskDzoiT-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
