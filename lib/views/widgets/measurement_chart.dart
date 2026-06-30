@@ -213,3 +213,113 @@ class LineComparisonChart extends StatelessWidget {
     );
   }
 }
+
+class TimeSeriesChart extends StatelessWidget {
+  final List<MeasurementModel> measurements;
+  final String? title;
+
+  const TimeSeriesChart({
+    super.key,
+    required this.measurements,
+    this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (measurements.isEmpty) {
+      return Center(
+        child: Text(
+          '測定データがありません',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    final spots = <FlSpot>[];
+    for (int i = 0; i < measurements.length; i++) {
+      spots.add(FlSpot(i.toDouble(), measurements[i].dbValue));
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      height: 300,
+      child: Column(
+        children: [
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                title!,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: primaryColor,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 4,
+                          color: primaryColor,
+                          strokeWidth: 0,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: primaryColor.withOpacity(0.1),
+                    ),
+                  ),
+                ],
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index >= 0 && index < measurements.length) {
+                          final time = measurements[index].timestamp;
+                          return Text('${time.hour}:${time.minute.toString().padLeft(2, '0')}', style: const TextStyle(fontSize: 10));
+                        }
+                        return const Text('');
+                      },
+                      reservedSize: 30,
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        return Text('${value.toInt()} dB', style: const TextStyle(fontSize: 10));
+                      },
+                      reservedSize: 45,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) {
+                    return FlLine(
+                      color: Colors.grey[300]!,
+                      strokeWidth: 0.5,
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

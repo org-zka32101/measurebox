@@ -18,13 +18,22 @@ import 'views/screens/comparison_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await HiveService.initBoxes();
+  try {
+    // Initialize Hive first
+    await HiveService.initBoxes();
+  } catch (e) {
+    print('Hive initialization error: $e');
+  }
 
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    // Initialize Firebase (blocking)
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialized successfully');
+  } catch (e) {
+    print('Firebase initialization error: $e');
+  }
 
   runApp(const ProviderScope(child: MyApp()));
 }

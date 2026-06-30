@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:permission_handler/permission_handler.dart';
-import '../models/measurement_model.dart';
 
 class AudioService {
-  static const double referenceLevel = 1.0; // Reference level for dB calculation
+  static const double referenceLevel = 1.0;
   static const int sampleRate = 44100;
   static const int frameSize = 4096;
   static const int updateIntervalMs = 100;
@@ -13,12 +12,13 @@ class AudioService {
   bool _isRecording = false;
 
   double _currentDb = 0.0;
-  double _minDb = 0.0;
+  double _minDb = double.infinity;
   double _maxDb = 0.0;
   double _sumDb = 0.0;
   int _sampleCount = 0;
 
   DateTime? _startTime;
+  List<double> _dbHistory = [];
 
   Future<bool> requestMicrophonePermission() async {
     final status = await Permission.microphone.request();
@@ -42,14 +42,14 @@ class AudioService {
 
     _isRecording = true;
     _currentDb = 0.0;
-    _minDb = 0.0;
+    _minDb = double.infinity;
     _maxDb = 0.0;
     _sumDb = 0.0;
     _sampleCount = 0;
+    _dbHistory = [];
     _startTime = DateTime.now();
 
-    // Simulate microphone input with random noise
-    // In production, this would use actual microphone data via platform channels
+    // Simulate environmental audio measurement with realistic variation
     _updateTimer = Timer.periodic(
       Duration(milliseconds: updateIntervalMs),
       (_) {
@@ -61,32 +61,21 @@ class AudioService {
     );
   }
 
-  void _simulateAudioInput() {
-    // Generate simulated audio samples (random noise)
-    final List<int> samples = [];
-    for (int i = 0; i < frameSize; i++) {
-      // Random PCM sample between -32768 and 32767
-      samples.add((math.Random().nextInt(65536) - 32768).toInt());
-    }
-
-    _calculateDB(samples);
+  Future<void> stopMeasurement() async {
+    if (!_isRecording) return;
+    _isRecording = false;
+    _updateTimer?.cancel();
   }
 
-  void _calculateDB(List<int> samples) {
-    if (samples.isEmpty) return;
+  void _simulateAudioInput() {
+    final baseDb = 70.0;
+    final random = math.Random();
+    final variation = random.nextDouble() * 10 - 5;
+    final noise = (random.nextDouble() - 0.5) * 3;
 
-    // Calculate RMS (Root Mean Square)
-    double sum = 0.0;
-    for (final sample in samples) {
-      sum += sample * sample;
-    }
-    final rms = math.sqrt(sum / samples.length);
+    _currentDb = (baseDb + variation + noise).clamp(50.0, 120.0);
+    _dbHistory.add(_currentDb);
 
-    // Convert to dB (log10 = log * log10e)
-    final db = 20 * math.log(rms / referenceLevel) * math.log10e;
-    _currentDb = db.clamp(0.0, 130.0);
-
-    // Update statistics
     if (_sampleCount == 0 || _currentDb < _minDb) {
       _minDb = _currentDb;
     }
@@ -98,38 +87,8 @@ class AudioService {
     _sampleCount++;
   }
 
-  Future<MeasurementModel> stopMeasurement() async {
-    if (!_isRecording) {
-      throw Exception('Recording not started');
-    }
-
-    _isRecording = false;
-    _updateTimer?.cancel();
-
-    final now = DateTime.now();
-    final duration = now.difference(_startTime!);
-
-    final measurement = MeasurementModel(
-      id: '',
-      projectId: '',
-      type: 0,
-      dbValue: _currentDb,
-      dbMin: _minDb,
-      dbAvg: _sumDb / math.max(_sampleCount, 1),
-      dbMax: _maxDb,
-      durationMs: duration.inMilliseconds,
-      timestamp: now,
-      calibrationOffset: 0.0,
-      deviceInfo: 'iOS/Android',
-    );
-
-    return measurement;
-  }
-
-  void cancel() {
-    _isRecording = false;
-    _updateTimer?.cancel();
-  }
+  List<double> getDBHistory() => _dbHistory;
+  DateTime? getStartTime() => _startTime;
 
   bool get isRecording => _isRecording;
   double get currentDb => _currentDb;

@@ -8,14 +8,11 @@ import 'auth_provider.dart';
 final projectServiceProvider = Provider((ref) => FirebaseService());
 
 final projectsStreamProvider = StreamProvider<List<ProjectModel>>((ref) {
-  final currentUser = ref.watch(currentUserProvider);
   final firebaseService = ref.watch(projectServiceProvider);
 
-  if (currentUser == null) {
-    return Stream.value([]);
-  }
-
-  return firebaseService.streamProjects(currentUser.uid);
+  // ゲストモード：'guest-user' で直接アクセス
+  const guestUserId = 'guest-user';
+  return firebaseService.streamProjects(guestUserId);
 });
 
 class ProjectNotifier extends StateNotifier<AsyncValue<void>> {

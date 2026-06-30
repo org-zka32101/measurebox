@@ -7,6 +7,7 @@ import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';
 import '../../providers/measurement_provider.dart';
 import '../../services/csv_service.dart';
+import '../widgets/measurement_chart.dart';
 
 class LogsScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -164,6 +165,9 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
             return true;
           }).toList();
 
+          // Sort by date
+          filteredMeasurements.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
           if (filteredMeasurements.isEmpty) {
             return Center(
               child: Column(
@@ -199,65 +203,75 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
             );
           }
 
-          // Sort by timestamp descending
+          // Sort by date descending
           final sortedMeasurements = List<MeasurementModel>.from(filteredMeasurements)
             ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-          return ListView.builder(
-            itemCount: sortedMeasurements.length,
-            itemBuilder: (context, index) {
-              final measurement = sortedMeasurements[index];
-              final statusColor = _getStatusColor(measurement.dbValue);
-              final statusLabel = _getStatusLabel(measurement.dbValue);
-              final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                TimeSeriesChart(
+                  measurements: filteredMeasurements,
+                  title: '測定値の推移',
+                ),
+                const SizedBox(height: 16),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: sortedMeasurements.length,
+                  itemBuilder: (context, index) {
+                    final measurement = sortedMeasurements[index];
+                    final statusColor = _getStatusColor(measurement.dbValue);
+                    final statusLabel = _getStatusLabel(measurement.dbValue);
+                    final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${measurement.dbValue.toStringAsFixed(1)} dB',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(color: statusColor),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                formatter.format(measurement.timestamp),
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
-                              border: Border.all(color: statusColor),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              statusLabel,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${measurement.dbValue.toStringAsFixed(1)} dB',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(color: statusColor),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      formatter.format(measurement.timestamp),
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.1),
+                                    border: Border.all(color: statusColor),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    statusLabel,
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
                       ),
                       const SizedBox(height: 12),
                       Row(

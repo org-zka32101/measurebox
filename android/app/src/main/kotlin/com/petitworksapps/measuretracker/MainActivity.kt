@@ -1,4 +1,4 @@
-package com.petit.works.measurebox
+package com.petitworksapps.measuretracker
 
 import io.flutter.embedding.android.FlutterActivity
 

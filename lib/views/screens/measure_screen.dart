@@ -43,7 +43,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
 
   @override
   void dispose() {
-    _audioService.cancel();
+    if (_isMeasuring) {
+      _audioService.stopMeasurement();
+    }
     _memoController.dispose();
     super.dispose();
   }
@@ -103,7 +105,23 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
 
   Future<void> _stopMeasuring() async {
     try {
-      _lastMeasurement = await _audioService.stopMeasurement();
+      await _audioService.stopMeasurement();
+
+      final durationMs = DateTime.now().difference(_audioService.getStartTime() ?? DateTime.now()).inMilliseconds;
+
+      _lastMeasurement = MeasurementModel(
+        id: '',
+        projectId: widget.projectId,
+        type: 0,
+        dbValue: _currentDb,
+        dbMin: _minDb,
+        dbAvg: _avgDb,
+        dbMax: _maxDb,
+        durationMs: durationMs,
+        timestamp: DateTime.now(),
+        memo: null,
+      );
+
       setState(() => _isMeasuring = false);
     } catch (e) {
       if (mounted) {
