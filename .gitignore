@@ -14,3 +14,11 @@ firebase_options.dart
 .gradle/
 .m2/
 xcuserdata/
+
+# Firebase configuration (DO NOT COMMIT)
+google-services.json
+GoogleService-Info.plist
+.firebaserc
+*.mobileprovision
+*.p8
+*.p12
