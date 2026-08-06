@@ -208,11 +208,13 @@ Before App Store/Google Play:
 
 ---
 
-**Last Updated**: 2026-06-28  
-**Status**: Phase 7 - 本番化完成 ✅  
+**Last Updated**: 2026-08-06  
+**Status**: Phase 7.1 - iOS ビルド環境準備完成  
 **App Name**: MeasureTracker  
 **Package Name**: com.petitworksapps.measuretracker  
 **Firebase**: Configured (petit-works-utility project)  
+**iOS Minimum**: 12.0+  
+**App Store Bundle ID**: com.petitworksapps.measuretracker  
 
 ### Phase 6 完成（元々）
   - ✅ ドキュメント（README/SETUP/PERFORMANCE）
@@ -262,8 +264,49 @@ Before App Store/Google Play:
 - v1.7-v1.8: 日付フィルター（Logs/Comparison）
 - **最終版**: v1.8 (53.0MB) 全機能実装完成
 
-**Next Phase**: Phase 7 リリース前最終確認
-- [ ] Firestore Rules デプロイ手順
-- [ ] 実機テスト（iOS/Android）
-- [ ] Google Play申請準備
-- [ ] GitHub Release タグ作成
+### Phase 7 ✅ **進行中** - iOS ビルド & リリース前最終確認
+
+#### 7.1 iOS ビルド環境準備 ✅ (2026-08-06)
+- ✅ Info.plist にマイク権限・App Tracking 権限追加
+- ✅ Podfile 作成（CocoaPods 依存関係管理）
+- ✅ iOS_BUILD_GUIDE.md 作成（詳細ガイド）
+- ✅ build_ios.sh スクリプト作成（自動ビルド）
+
+#### 7.2 iOS ビルド実行 (進行中)
+- [ ] Firebase GoogleService-Info.plist ダウンロード & 配置
+- [ ] CocoaPods 依存関係インストール (pod install)
+- [ ] iOS デバッグビルド実行 (flutter build ios --debug)
+- [ ] iPhone 実機テスト
+  - [ ] マイク権限リクエスト確認
+  - [ ] 音量測定機能確認
+  - [ ] オフライン同期確認
+  - [ ] UI/UX レスポンシブネス確認
+- [ ] iOS リリースビルド実行 (flutter build ios --release)
+- [ ] Archive 作成 (xcodebuild archive)
+
+#### 7.3 App Store 申請準備 (予定)
+- [ ] App Store Connect にアプリ登録
+- [ ] メタデータ完成（説明・キーワード・スクリーンショット）
+- [ ] プライバシーポリシー・Support URL 公開
+- [ ] Version 1.0.0 確認
+
+#### 7.4 Android ビルド準備 (予定)
+- [ ] build_android.sh スクリプト作成
+- [ ] google-services.json ダウンロード
+- [ ] Android keystore 生成
+- [ ] Google Play Console 登録
+
+#### 7.5 Firestore Security Rules 本番化 (予定)
+- [ ] Firebase Console で Rules 検証
+- [ ] 本番環境 Rules デプロイ
+- [ ] セキュリティテスト実行
+
+### 成果物（Phase 7）
+- 📄 iOS_BUILD_GUIDE.md - 詳細なビルド・リリース手順
+- 📄 scripts/build_ios.sh - iOS 自動ビルドスクリプト
+- 📁 ios/Podfile - CocoaPods 依存関係設定
+- 📝 ios/Runner/Info.plist - マイク・追跡権限追加
+
+**Current Phase**: Phase 7.1 - iOS ビルド環境完成  
+**Branch**: claude/ios-build-1qfnz9  
+**Next Task**: Firebase GoogleService-Info.plist 設定 + iOS デバッグビルド実行

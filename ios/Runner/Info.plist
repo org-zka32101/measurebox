@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Microphone permission for audio measurement -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>マイクを使用して音量を測定します。測定データはあなたのデバイスにのみ保存されます。</string>
+	<!-- App Tracking Transparency -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>あなたの測定データを分析して、アプリの改善に役立てます。</string>
 </dict>
 </plist>
