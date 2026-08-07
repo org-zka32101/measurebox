@@ -25,7 +25,7 @@ class DecibelGauge extends StatelessWidget {
       height: 300,
       child: CustomPaint(
         painter: DecibelGaugePainter(
-          value: value.clamp(0.0, 130.0),
+          value: value.clamp(0.0, 130.0).toDouble(),
           color: _getColor(value),
           isAnimating: isAnimating,
         ),

@@ -29,13 +29,15 @@ class MeasurementModelAdapter extends TypeAdapter<MeasurementModel> {
       memo: fields[9] as String?,
       calibrationOffset: fields[10] as double,
       deviceInfo: fields[11] as String,
+      peakFrequency: fields[12] as double?,
+      dominantFrequencies: (fields[13] as List?)?.cast<double>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, MeasurementModel obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +61,11 @@ class MeasurementModelAdapter extends TypeAdapter<MeasurementModel> {
       ..writeByte(10)
       ..write(obj.calibrationOffset)
       ..writeByte(11)
-      ..write(obj.deviceInfo);
+      ..write(obj.deviceInfo)
+      ..writeByte(12)
+      ..write(obj.peakFrequency)
+      ..writeByte(13)
+      ..write(obj.dominantFrequencies);
   }
 
   @override
