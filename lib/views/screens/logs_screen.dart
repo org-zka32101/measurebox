@@ -324,6 +324,9 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                 ),
               );
             },
+                ),
+              ],
+            ),
           );
         },
         loading: () => const Center(

@@ -1,30 +1,24 @@
-// This is a basic Flutter widget test.
+// Basic smoke test for MeasureTracker.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Verifies the app boots (guest mode, straight to HomeScreen per
+// lib/main.dart's MyApp) without crashing. Firebase isn't initialized in
+// this test environment, so HomeScreen's projectsStreamProvider never
+// resolves to data — only the AppBar title (which doesn't depend on the
+// stream) is safe to assert on here.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:measurebox/constants/strings.dart';
 import 'package:measurebox/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('App boots to HomeScreen in guest mode', (WidgetTester tester) async {
+    // MyApp is a ConsumerWidget, so it needs a ProviderScope ancestor.
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text(AppStrings.projects), findsOneWidget);
   });
 }

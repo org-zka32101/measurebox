@@ -141,7 +141,9 @@ class MeasurementModel {
       dbAvg: (data['dB_avg'] as num?)?.toDouble() ?? 0.0,
       dbMax: (data['dB_max'] as num?)?.toDouble() ?? 0.0,
       durationMs: data['duration_ms'] as int? ?? 0,
-      timestamp: (data['timestamp'] as dynamic)?.toDate() ?? DateTime.now(),
+      timestamp: data['timestamp'] is DateTime
+          ? data['timestamp'] as DateTime
+          : (data['timestamp'] as dynamic)?.toDate() ?? DateTime.now(),
       memo: data['memo'],
       calibrationOffset: (data['calibration_offset'] as num?)?.toDouble() ?? 0.0,
       deviceInfo: data['device_info'] ?? '',

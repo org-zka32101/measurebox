@@ -73,7 +73,7 @@ void main() {
           dbMax: 80.0,
           durationMs: 5000,
           timestamp: DateTime(2026, 6, 14),
-          memo: 'Test memo with special chars: 日本語, !@#$%',
+          memo: r'Test memo with special chars: 日本語, !@#$%',
         ),
       ];
 

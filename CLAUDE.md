@@ -315,10 +315,14 @@ Before App Store/Google Play:
 - ✅ MeasureScreen TabBar化（音量/周波数、同時記録）
 - ✅ MeasurementModel 拡張（peakFrequency, dominantFrequencies）
 - ✅ ユニットテスト10ケース（FFT精度・エッジケース）
-- ⚠️ **未検証**: この環境にFlutter SDKがないため `flutter analyze`/`flutter test`/
-  `flutter build` は未実施。詳細は FREQUENCY_IMPLEMENTATION_STATUS.md 参照
+- ✅ **検証済み**: 実際にDart 3.12.2 + Flutter 3.44.9をこの環境に導入し
+  `flutter analyze`（エラー0件）・`flutter test`（32/32合格）・
+  `flutter build web`（debug/release共に成功）を実行して確認。
+  検証中に発見した既存コードの実バグ6件も修正済み。詳細は
+  BUILD_VERIFICATION_REPORT.md 参照
 - 📝 マイク入力は引き続きシミュレーション（dB測定と同じ方針）、FFT/解析パイプライン自体は本物のロジック
+- ⚠️ Android/iOSのネイティブビルド（APK/IPA）は未実施（Android SDK取得が環境のエグレスポリシーでブロック、iOSはmacOS+Xcode必須のため）。開発者環境で実施要
 
-**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定機能実装  
+**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定機能実装（検証済み）  
 **Branch**: claude/ios-build-1qfnz9  
-**Next Task**: Flutter環境で `flutter analyze`/`flutter test`/`flutter build` 実行して検証
+**Next Task**: 開発者環境で `flutter build apk`/`flutter build ios` 実行 + Firebase実認証情報設定

@@ -84,7 +84,9 @@ class ComparisonModel {
       afterMeasurementId: data['afterMeasurementId'] ?? '',
       improvementDb: (data['improvement_dB'] as num?)?.toDouble() ?? 0.0,
       improvementRate: (data['improvement_rate'] as num?)?.toDouble() ?? 0.0,
-      createdAt: (data['createdAt'] as dynamic)?.toDate() ?? DateTime.now(),
+      createdAt: data['createdAt'] is DateTime
+          ? data['createdAt'] as DateTime
+          : (data['createdAt'] as dynamic)?.toDate() ?? DateTime.now(),
       memo: data['memo'],
     );
   }
