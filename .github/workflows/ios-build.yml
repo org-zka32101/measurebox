@@ -51,6 +51,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select latest stable Xcode
+        # The Firebase iOS SDK (fetched via Swift Package Manager as a
+        # transitive dependency of firebase_core/cloud_firestore/
+        # firebase_auth) uses Swift 6 concurrency syntax (`sending`) that
+        # requires a recent Xcode/Swift toolchain. The runner's default
+        # `xcode-select` target can lag behind, so pin explicitly to
+        # whatever the newest stable Xcode pre-installed on this runner is.
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
         uses: subosito/flutter-action@v2
         with:
