@@ -34,11 +34,10 @@ base64 -i ios/Runner/GoogleService-Info.plist | pbcopy
 # → GOOGLE_SERVICE_INFO_PLIST_BASE64 として登録
 ```
 
-### 署名済みIPA（App Store提出用）が必要な場合
-現状のワークフローは検証用（`--no-codesign`）です。実際に配布可能なIPAを
-CIで生成するには、Apple Developer の配布証明書・Provisioning Profile を
-Secrets に追加し、`xcodebuild -exportArchive` のステップを別途追加する必要が
-あります（`fastlane match` の利用を推奨）。ご希望であれば追加実装します。
+### 署名済みIPA（App Store提出用）✅ 実装済み
+`.github/workflows/ios-release.yml` で、署名済みIPAの生成とTestFlightへの
+自動アップロードに対応しています。Apple Developer証明書等のSecrets設定方法は
+**iOS_RELEASE_SIGNING_SETUP.md** を参照してください。
 
 ---
 
