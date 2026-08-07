@@ -213,7 +213,7 @@ Before App Store/Google Play:
 **App Name**: MeasureTracker  
 **Package Name**: com.petitworksapps.measuretracker  
 **Firebase**: Configured (petit-works-utility project)  
-**iOS Minimum**: 12.0+  
+**iOS Minimum**: 13.0+  
 **App Store Bundle ID**: com.petitworksapps.measuretracker  
 
 ### Phase 6 完成（元々）

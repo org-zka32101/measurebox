@@ -20,7 +20,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const guestUser = (uid: guestUserId,);
     final projectsAsync = ref.watch(projectsStreamProvider);
 
     return Scaffold(

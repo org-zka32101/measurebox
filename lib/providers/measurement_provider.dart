@@ -2,7 +2,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/measurement_model.dart';
 import '../services/firebase_service.dart';
-import '../services/hive_service.dart';
 import 'auth_provider.dart';
 
 final measurementServiceProvider = Provider((ref) => FirebaseService());

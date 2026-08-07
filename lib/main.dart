@@ -5,7 +5,6 @@ import 'firebase_options.dart';
 import 'constants/theme.dart';
 import 'constants/strings.dart';
 import 'services/hive_service.dart';
-import 'providers/auth_provider.dart';
 import 'views/screens/login_screen.dart';
 import 'views/screens/signup_screen.dart';
 import 'views/screens/home_screen.dart';

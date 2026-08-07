@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';

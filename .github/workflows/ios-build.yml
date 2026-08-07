@@ -1,0 +1,131 @@
+name: iOS Build (CI Verification)
+
+# Builds an UNSIGNED iOS .app on every push/PR touching iOS-relevant files.
+# This is a compile/regression check, not an App Store release pipeline —
+# there is no Apple Developer signing here, so it cannot produce an
+# installable IPA on its own. See iOS_BUILD_GUIDE.md for the manual,
+# signed release process.
+#
+# Firebase: lib/firebase_options.dart and ios/Runner/GoogleService-Info.plist
+# are both gitignored (contain project keys) and are NOT committed. This
+# workflow falls back to the checked-in `.example` placeholders so the build
+# can proceed unattended. That means Firebase itself will be non-functional
+# in this CI build (main.dart already catches Firebase init failures).
+# To build against the REAL Firebase project instead, add these repo secrets
+# (Settings > Secrets and variables > Actions):
+#   FIREBASE_OPTIONS_DART_BASE64        - base64 of a real lib/firebase_options.dart
+#   GOOGLE_SERVICE_INFO_PLIST_BASE64    - base64 of a real GoogleService-Info.plist
+# Generate a base64 payload with: base64 -i lib/firebase_options.dart | pbcopy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'ios/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/ios-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'ios/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.44.9'
+
+jobs:
+  build-ios:
+    name: Build & verify (iOS, unsigned)
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        # The Firebase iOS SDK (fetched via Swift Package Manager as a
+        # transitive dependency of firebase_core/cloud_firestore/
+        # firebase_auth) uses Swift 6 concurrency syntax (`sending`) that
+        # requires a recent Xcode/Swift toolchain. The runner's default
+        # `xcode-select` target can lag behind, so pin explicitly to
+        # whatever the newest stable Xcode pre-installed on this runner is.
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Provide firebase_options.dart
+        run: |
+          if [ -n "${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}" ]; then
+            echo "${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}" | base64 --decode > lib/firebase_options.dart
+            echo "Using real firebase_options.dart from repo secret."
+          else
+            cp lib/firebase_options.dart.example lib/firebase_options.dart
+            echo "No FIREBASE_OPTIONS_DART_BASE64 secret set — using placeholder. Firebase will not actually connect in this build."
+          fi
+
+      - name: Provide GoogleService-Info.plist
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
+            echo "Using real GoogleService-Info.plist from repo secret."
+          else
+            cp ios/Runner/GoogleService-Info.plist.example ios/Runner/GoogleService-Info.plist
+            echo "No GOOGLE_SERVICE_INFO_PLIST_BASE64 secret set — using placeholder."
+          fi
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: Flutter analyze
+        # `flutter analyze` exits non-zero if there is ANY issue, including
+        # pre-existing `info`-level style lints (400+ of them, unrelated to
+        # this workflow, tracked separately) and ~25 `warning`-level entries
+        # that are almost all analysis_options.yaml referencing lint rule
+        # names that were renamed/removed in newer Dart releases (a lint
+        # config hygiene issue, not a code-correctness issue). Real
+        # unused-import/variable warnings found alongside these were fixed
+        # directly. --no-fatal-infos/--no-fatal-warnings keep this step
+        # failing only on actual `error`-level issues.
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Flutter test
+        run: flutter test
+
+      - name: Build iOS (release, unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Upload unsigned .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeasureTracker-ios-unsigned-${{ github.sha }}
+          path: build/ios/iphoneos/Runner.app
+          retention-days: 14
+          if-no-files-found: error
