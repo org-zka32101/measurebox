@@ -8,6 +8,21 @@ MeasureTracker をビルド・実行するには、Firebase 設定ファイル�
 |-----------------|---------|-------|
 | iOS | `GoogleService-Info.plist` | `ios/Runner/` |
 | Android | `google-services.json` | `android/app/` |
+| 全プラットフォーム（Dart側） | `firebase_options.dart` | `lib/` |
+
+すべて `.gitignore` 対象（API キーを含むため）。`*.example` サフィックス付きのテンプレートが
+リポジトリに含まれているので、コピーして実値に置き換えてください。
+
+```bash
+cp lib/firebase_options.dart.example lib/firebase_options.dart
+# その後、下記のコマンドで実プロジェクトの値に置き換える（推奨）:
+flutterfire configure --project=petit-works-utility
+```
+
+**注意**: `firebase_options.dart` が存在しないと `flutter analyze`/`flutter build` は
+`lib/main.dart` で `Target of URI doesn't exist` エラーになります。上記コピーだけでも
+ビルドは通るようになりますが（プレースホルダ値なので実際の Firebase 接続は失敗します）、
+本番では必ず `flutterfire configure` で実値を生成してください。
 
 ---
 
