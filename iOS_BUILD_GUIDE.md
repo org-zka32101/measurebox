@@ -1,6 +1,48 @@
 # iOS ビルド & リリース準備ガイド - Phase 7
 
-## 📋 iOS ビルド前チェックリスト
+## 🤖 GitHub Actions での自動ビルド（CI検証）
+
+`main` への push / PR の度に、GitHub 提供の macOS ランナー上で **未署名の iOS ビルド** を
+自動実行するワークフローを追加しました: `.github/workflows/ios-build.yml`
+
+**実施内容**: `flutter pub get` → `flutter analyze` → `flutter test` →
+`flutter build ios --release --no-codesign`。成功すると `Runner.app`（未署名）を
+Actions の Artifacts からダウンロードできます。
+
+### できること / できないこと
+
+| 項目 | 対応 |
+|------|------|
+| コンパイルが通るかの継続的検証 | ✅ 自動 |
+| 実機/シミュレータへのインストール検証 | ❌（未署名のため） |
+| App Store への提出物（署名済みIPA） | ❌（Apple Developer証明書が必要、別途設定要） |
+
+### Firebase 設定（CI用）
+`lib/firebase_options.dart` と `ios/Runner/GoogleService-Info.plist` は
+`.gitignore` 対象のため、CI では既定でリポジトリ内の `*.example` プレースホルダを
+使用します（＝この状態でビルドされたアプリは Firebase に接続できません）。
+
+実際の Firebase プロジェクトに接続した状態でCIビルドしたい場合は、リポジトリの
+**Settings → Secrets and variables → Actions** に以下を追加してください:
+
+```bash
+# ローカルで実ファイルをbase64化してSecretsに貼り付け
+base64 -i lib/firebase_options.dart | pbcopy
+# → FIREBASE_OPTIONS_DART_BASE64 として登録
+
+base64 -i ios/Runner/GoogleService-Info.plist | pbcopy
+# → GOOGLE_SERVICE_INFO_PLIST_BASE64 として登録
+```
+
+### 署名済みIPA（App Store提出用）が必要な場合
+現状のワークフローは検証用（`--no-codesign`）です。実際に配布可能なIPAを
+CIで生成するには、Apple Developer の配布証明書・Provisioning Profile を
+Secrets に追加し、`xcodebuild -exportArchive` のステップを別途追加する必要が
+あります（`fastlane match` の利用を推奨）。ご希望であれば追加実装します。
+
+---
+
+## 📋 iOS ビルド前チェックリスト（手動ビルド）
 
 ### 1. 環境準備
 - [ ] Xcode 15.0 以上がインストールされている
