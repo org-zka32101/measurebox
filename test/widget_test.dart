@@ -6,7 +6,6 @@
 // resolves to data — only the AppBar title (which doesn't depend on the
 // stream) is safe to assert on here.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
