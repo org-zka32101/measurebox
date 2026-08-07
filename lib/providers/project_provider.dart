@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 import '../models/project_model.dart';
 import '../services/firebase_service.dart';
 import '../services/hive_service.dart';
-import 'auth_provider.dart';
 
 final projectServiceProvider = Provider((ref) => FirebaseService());
 
