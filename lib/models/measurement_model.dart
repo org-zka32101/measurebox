@@ -41,6 +41,17 @@ class MeasurementModel {
   @HiveField(11)
   String deviceInfo;
 
+  /// Peak (dominant) frequency detected during the measurement, in Hz.
+  /// Null for measurements taken before frequency analysis was added, or
+  /// for dB-only measurements.
+  @HiveField(12)
+  double? peakFrequency;
+
+  /// Up to a handful of secondary dominant frequencies (Hz) detected
+  /// alongside [peakFrequency], loudest first.
+  @HiveField(13)
+  List<double>? dominantFrequencies;
+
   MeasurementModel({
     required this.id,
     required this.projectId,
@@ -54,10 +65,13 @@ class MeasurementModel {
     this.memo,
     this.calibrationOffset = 0.0,
     this.deviceInfo = '',
+    this.peakFrequency,
+    this.dominantFrequencies,
   });
 
   MeasurementType get measurementType =>
-      MeasurementType.values[type.clamp(0, MeasurementType.values.length - 1)];
+      MeasurementType.values[
+          type.clamp(0, MeasurementType.values.length - 1).toInt()];
 
   MeasurementModel copyWith({
     String? id,
@@ -72,6 +86,8 @@ class MeasurementModel {
     String? memo,
     double? calibrationOffset,
     String? deviceInfo,
+    double? peakFrequency,
+    List<double>? dominantFrequencies,
   }) {
     return MeasurementModel(
       id: id ?? this.id,
@@ -86,6 +102,8 @@ class MeasurementModel {
       memo: memo ?? this.memo,
       calibrationOffset: calibrationOffset ?? this.calibrationOffset,
       deviceInfo: deviceInfo ?? this.deviceInfo,
+      peakFrequency: peakFrequency ?? this.peakFrequency,
+      dominantFrequencies: dominantFrequencies ?? this.dominantFrequencies,
     );
   }
 
@@ -102,6 +120,8 @@ class MeasurementModel {
       'memo': memo,
       'calibration_offset': calibrationOffset,
       'device_info': deviceInfo,
+      'peak_frequency': peakFrequency,
+      'dominant_frequencies': dominantFrequencies,
     };
   }
 
@@ -125,6 +145,10 @@ class MeasurementModel {
       memo: data['memo'],
       calibrationOffset: (data['calibration_offset'] as num?)?.toDouble() ?? 0.0,
       deviceInfo: data['device_info'] ?? '',
+      peakFrequency: (data['peak_frequency'] as num?)?.toDouble(),
+      dominantFrequencies: (data['dominant_frequencies'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList(),
     );
   }
 }

@@ -44,6 +44,15 @@ class AppStrings {
   static const String max = '最大';
   static const String duration = '測定時間';
 
+  // Frequency measurement
+  static const String volumeTab = '音量 (dB)';
+  static const String frequencyTab = '周波数';
+  static const String peakFrequency = 'ピーク周波数';
+  static const String avgFrequency = '平均周波数';
+  static const String dominantFrequencies = '主要周波数';
+  static const String frequencySpectrum = '周波数スペクトラム';
+  static const String noFrequencyData = '測定を開始すると周波数が表示されます';
+
   // Before/After
   static const String before = '対策前';
   static const String after = '対策後';

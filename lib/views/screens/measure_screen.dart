@@ -5,8 +5,11 @@ import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';
 import '../../services/audio_service.dart';
+import '../../services/frequency_analysis_service.dart';
 import '../../providers/measurement_provider.dart';
 import '../widgets/decibel_gauge.dart';
+import '../widgets/frequency_spectrum_widget.dart';
+import '../widgets/frequency_details_card.dart';
 
 class MeasureScreen extends ConsumerStatefulWidget {
   static const String guestUserId = 'guest-user';
@@ -22,13 +25,16 @@ class MeasureScreen extends ConsumerStatefulWidget {
   ConsumerState<MeasureScreen> createState() => _MeasureScreenState();
 }
 
-class _MeasureScreenState extends ConsumerState<MeasureScreen> {
+class _MeasureScreenState extends ConsumerState<MeasureScreen>
+    with SingleTickerProviderStateMixin {
   late AudioService _audioService;
+  late TabController _tabController;
   bool _isMeasuring = false;
   double _currentDb = 0.0;
   double _minDb = 0.0;
   double _avgDb = 0.0;
   double _maxDb = 0.0;
+  FrequencySpectrum? _currentSpectrum;
   MeasurementModel? _lastMeasurement;
 
   late TextEditingController _memoController;
@@ -37,6 +43,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
   void initState() {
     super.initState();
     _audioService = AudioService();
+    _tabController = TabController(length: 2, vsync: this);
     _memoController = TextEditingController();
     _checkMicrophonePermission();
   }
@@ -45,7 +52,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
   void dispose() {
     if (_isMeasuring) {
       _audioService.stopMeasurement();
+      _audioService.stopFrequencyMeasurement();
     }
+    _tabController.dispose();
     _memoController.dispose();
     super.dispose();
   }
@@ -92,6 +101,11 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
           });
         },
       );
+      await _audioService.startFrequencyMeasurement(
+        onSpectrumChange: (spectrum) {
+          setState(() => _currentSpectrum = spectrum);
+        },
+      );
 
       setState(() => _isMeasuring = true);
     } catch (e) {
@@ -106,8 +120,11 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
   Future<void> _stopMeasuring() async {
     try {
       await _audioService.stopMeasurement();
+      await _audioService.stopFrequencyMeasurement();
 
       final durationMs = DateTime.now().difference(_audioService.getStartTime() ?? DateTime.now()).inMilliseconds;
+
+      final hasFrequencyData = _audioService.getPeakFrequencyHistory().isNotEmpty;
 
       _lastMeasurement = MeasurementModel(
         id: '',
@@ -120,6 +137,10 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
         durationMs: durationMs,
         timestamp: DateTime.now(),
         memo: null,
+        peakFrequency: hasFrequencyData ? _audioService.avgPeakFrequency : null,
+        dominantFrequencies: _currentSpectrum?.topFrequencies
+            .map((peak) => peak.frequency)
+            .toList(),
       );
 
       setState(() => _isMeasuring = false);
@@ -145,6 +166,8 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
             dbMax: _lastMeasurement!.dbMax,
             durationMs: _lastMeasurement!.durationMs,
             memo: _memoController.text.isEmpty ? null : _memoController.text,
+            peakFrequency: _lastMeasurement!.peakFrequency,
+            dominantFrequencies: _lastMeasurement!.dominantFrequencies,
           );
 
       if (mounted) {
@@ -186,173 +209,209 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen> {
             onPressed: _showGuide,
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: AppStrings.volumeTab),
+            Tab(text: AppStrings.frequencyTab),
+          ],
+        ),
       ),
-      body: SingleChildScrollView(
-        child: Center(
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-
-              // 操作ヒント（測定前のみ）
-              if (!_isMeasuring && _lastMeasurement == null)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded,
-                          color: primaryColor, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          AppStrings.measureHint,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: primaryDark,
-                                height: 1.4,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              const SizedBox(height: 16),
-
-              // Gauge
-              DecibelGauge(
-                value: _currentDb,
-                isAnimating: _isMeasuring,
+      body: Column(
+        children: [
+          // 操作ヒント（測定前のみ）
+          if (!_isMeasuring && _lastMeasurement == null)
+            Container(
+              margin: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(14),
               ),
-
-              // 現在のステータスバッジ（測定中）
-              if (_isMeasuring) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _statusColor(_currentDb).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(20),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      color: primaryColor, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      AppStrings.measureHint,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: primaryDark,
+                            height: 1.4,
+                          ),
+                    ),
                   ),
-                  child: Row(
+                ],
+              ),
+            ),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildVolumeTab(context),
+                _buildFrequencyTab(context),
+              ],
+            ),
+          ),
+
+          // Control buttons（両タブ共通・1回の測定でdB/周波数を同時記録）
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: _isMeasuring
+                ? SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _stopMeasuring,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: dangerColor,
+                      ),
+                      child: Text(AppStrings.stopMeasure),
+                    ),
+                  )
+                : Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.circle, size: 10, color: _statusColor(_currentDb)),
-                      const SizedBox(width: 8),
-                      Text(
-                        _statusLabel(_currentDb),
-                        style: TextStyle(
-                          color: _statusColor(_currentDb),
-                          fontWeight: FontWeight.bold,
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _startMeasuring,
+                          child: Text(AppStrings.startMeasure),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 24),
-
-              // Stats
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
+                      if (_lastMeasurement != null) ...[
+                        const SizedBox(height: 16),
+                        // Memo input
+                        TextField(
+                          controller: _memoController,
+                          decoration: InputDecoration(
+                            hintText: AppStrings.memo,
+                            labelText: AppStrings.memo,
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 16),
+                        // Save/Discard buttons
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            _buildStatColumn('最小', '${_minDb.toStringAsFixed(1)} dB'),
-                            _buildStatColumn('平均', '${_avgDb.toStringAsFixed(1)} dB'),
-                            _buildStatColumn('最大', '${_maxDb.toStringAsFixed(1)} dB'),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  _lastMeasurement = null;
+                                  _currentDb = 0;
+                                  _minDb = 0;
+                                  _maxDb = 0;
+                                  _avgDb = 0;
+                                  _currentSpectrum = null;
+                                  _memoController.clear();
+                                  setState(() {});
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey[400],
+                                ),
+                                child: const Text('破棄'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _saveMeasurement,
+                                child: Text(AppStrings.save),
+                              ),
+                            ),
                           ],
                         ),
                       ],
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVolumeTab(BuildContext context) {
+    return SingleChildScrollView(
+      child: Center(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+
+            // Gauge
+            DecibelGauge(
+              value: _currentDb,
+              isAnimating: _isMeasuring,
+            ),
+
+            // 現在のステータスバッジ（測定中）
+            if (_isMeasuring) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _statusColor(_currentDb).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.circle, size: 10, color: _statusColor(_currentDb)),
+                    const SizedBox(width: 8),
+                    Text(
+                      _statusLabel(_currentDb),
+                      style: TextStyle(
+                        color: _statusColor(_currentDb),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 24),
+
+            // Stats
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildStatColumn('最小', '${_minDb.toStringAsFixed(1)} dB'),
+                          _buildStatColumn('平均', '${_avgDb.toStringAsFixed(1)} dB'),
+                          _buildStatColumn('最大', '${_maxDb.toStringAsFixed(1)} dB'),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
+            ),
 
-              const SizedBox(height: 32),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
 
-              // Control buttons
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _isMeasuring
-                    ? SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _stopMeasuring,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: dangerColor,
-                          ),
-                          child: Text(AppStrings.stopMeasure),
-                        ),
-                      )
-                    : Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _startMeasuring,
-                              child: Text(AppStrings.startMeasure),
-                            ),
-                          ),
-                          if (_lastMeasurement != null) ...[
-                            const SizedBox(height: 16),
-                            // Memo input
-                            TextField(
-                              controller: _memoController,
-                              decoration: InputDecoration(
-                                hintText: AppStrings.memo,
-                                labelText: AppStrings.memo,
-                              ),
-                              maxLines: 2,
-                            ),
-                            const SizedBox(height: 16),
-                            // Save/Discard buttons
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      _lastMeasurement = null;
-                                      _currentDb = 0;
-                                      _minDb = 0;
-                                      _maxDb = 0;
-                                      _avgDb = 0;
-                                      _memoController.clear();
-                                      setState(() {});
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.grey[400],
-                                    ),
-                                    child: const Text('破棄'),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: _saveMeasurement,
-                                    child: Text(AppStrings.save),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-              ),
-
-              const SizedBox(height: 32),
-            ],
-          ),
+  Widget _buildFrequencyTab(BuildContext context) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: Column(
+          children: [
+            FrequencySpectrumWidget(spectrum: _currentSpectrum),
+            const SizedBox(height: 16),
+            FrequencyDetailsCard(spectrum: _currentSpectrum),
+          ],
         ),
       ),
     );

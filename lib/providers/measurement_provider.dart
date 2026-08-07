@@ -37,6 +37,8 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
     String? memo,
     double calibrationOffset = 0.0,
     String deviceInfo = '',
+    double? peakFrequency,
+    List<double>? dominantFrequencies,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -53,6 +55,8 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
         memo: memo,
         calibrationOffset: calibrationOffset,
         deviceInfo: deviceInfo,
+        peakFrequency: peakFrequency,
+        dominantFrequencies: dominantFrequencies,
       );
       await _firebaseService.saveMeasurement(userId, projectId, measurement);
       state = const AsyncValue.data(null);
