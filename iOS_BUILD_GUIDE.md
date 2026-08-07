@@ -100,7 +100,7 @@ cd ..
 #### 5.1 最小 iOS バージョン
 ```bash
 # Xcode で Runner プロジェクト → Build Settings
-# Minimum Deployment Target: iOS 12.0 以上を推奨
+# Minimum Deployment Target: iOS 13.0 以上（Runner.xcodeproj & ios/Podfile と一致させる）
 ```
 
 #### 5.2 署名設定（実機テスト用）
@@ -359,7 +359,7 @@ version: 2.0.0+4  # メジャー更新
 
 - [ ] Firebase GoogleService-Info.plist 設定済み
 - [ ] マイク権限 Info.plist に記載
-- [ ] iOS 最小バージョン確認（12.0+）
+- [ ] iOS 最小バージョン確認（13.0+）
 - [ ] 実機テスト合格（複数デバイス）
 - [ ] クラッシュレート 0%
 - [ ] プライバシーポリシー公開済み
@@ -388,5 +388,5 @@ version: 2.0.0+4  # メジャー更新
 
 **Last Updated**: 2026-08-06  
 **Status**: Phase 7 準備中  
-**iOS Minimum**: 12.0+  
+**iOS Minimum**: 13.0+  
 **Target Bundle ID**: com.petitworksapps.measuretracker

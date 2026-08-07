@@ -292,7 +292,7 @@
   - Privacy policy compliant
 
   ## 📱 Platforms
-  - iOS 12.0+
+  - iOS 13.0+
   - Android API 21+
 
   ## 🐛 Bug Fixes & Improvements

@@ -1,7 +1,13 @@
 # Podfile for MeasureTracker iOS Build
-# Platform: iOS 12.0+
+# Platform: iOS 13.0+
+#
+# Must match Runner.xcodeproj's IPHONEOS_DEPLOYMENT_TARGET (currently 13.0)
+# and be >= the Flutter engine pod's own minimum for this Flutter SDK version.
+# A lower value here causes CocoaPods dependency resolution to fail with
+# "could not find compatible versions for pod Flutter ... required a higher
+# minimum deployment target" even though the Xcode project itself is fine.
 
-platform :ios, '12.0'
+platform :ios, '13.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
