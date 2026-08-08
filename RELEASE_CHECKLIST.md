@@ -132,9 +132,9 @@
 ### ✅ セクション 4: App Store 申請準備（iOS）
 
 #### 4.1 App Store Connect 登録
-- [ ] Apple Developer Account にログイン
-- [ ] 新規アプリ登録完了
-- [ ] Bundle ID: com.petitworksapps.measuretracker 設定
+- [x] Apple Developer Account にログイン
+- [x] 新規アプリ登録完了
+- [x] Bundle ID: com.petitworksapps.measuretracker 設定
 - [ ] Initial Release Date: 2026-08-31
 
 #### 4.2 メタデータ
