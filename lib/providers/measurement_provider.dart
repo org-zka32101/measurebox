@@ -2,20 +2,16 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/measurement_model.dart';
 import '../services/firebase_service.dart';
-import 'auth_provider.dart';
 
 final measurementServiceProvider = Provider((ref) => FirebaseService());
 
 final measurementsByProjectProvider =
     StreamProvider.family<List<MeasurementModel>, String>((ref, projectId) {
-  final currentUser = ref.watch(currentUserProvider);
   final firebaseService = ref.watch(measurementServiceProvider);
 
-  if (currentUser == null) {
-    return Stream.value([]);
-  }
-
-  return firebaseService.streamMeasurements(currentUser.uid, projectId);
+  // ゲストモード：'guest-user' で直接アクセス
+  const guestUserId = 'guest-user';
+  return firebaseService.streamMeasurements(guestUserId, projectId);
 });
 
 class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {

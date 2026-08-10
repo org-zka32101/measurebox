@@ -3,20 +3,16 @@ import 'package:uuid/uuid.dart';
 import '../models/comparison_model.dart';
 import '../models/measurement_model.dart';
 import '../services/firebase_service.dart';
-import 'auth_provider.dart';
 
 final comparisonServiceProvider = Provider((ref) => FirebaseService());
 
 final comparisonsByProjectProvider =
     StreamProvider.family<List<ComparisonModel>, String>((ref, projectId) {
-  final currentUser = ref.watch(currentUserProvider);
   final firebaseService = ref.watch(comparisonServiceProvider);
 
-  if (currentUser == null) {
-    return Stream.value([]);
-  }
-
-  return firebaseService.streamComparisons(currentUser.uid, projectId);
+  // ゲストモード：'guest-user' で直接アクセス
+  const guestUserId = 'guest-user';
+  return firebaseService.streamComparisons(guestUserId, projectId);
 });
 
 class ComparisonNotifier extends StateNotifier<AsyncValue<void>> {

@@ -5,8 +5,6 @@ import 'firebase_options.dart';
 import 'constants/theme.dart';
 import 'constants/strings.dart';
 import 'services/hive_service.dart';
-import 'views/screens/login_screen.dart';
-import 'views/screens/signup_screen.dart';
 import 'views/screens/home_screen.dart';
 import 'views/screens/project_detail_screen.dart';
 import 'views/screens/settings_screen.dart';
@@ -79,59 +77,9 @@ class MyApp extends ConsumerWidget {
         return null;
       },
       routes: {
-        '/login': (_) => const LoginScreen(),
-        '/signup': (_) => const SignupScreen(),
         '/home': (_) => const HomeScreen(),
         '/settings': (_) => const SettingsScreen(),
       },
-    );
-  }
-}
-
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _initializeApp();
-  }
-
-  Future<void> _initializeApp() async {
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      // Auth state is handled by MyApp's Consumer widget
-      Navigator.of(context).pushReplacementNamed('/login');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              AppStrings.appName,
-              style: Theme.of(context).textTheme.displayLarge,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              AppStrings.appSubtitle,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(),
-          ],
-        ),
-      ),
     );
   }
 }

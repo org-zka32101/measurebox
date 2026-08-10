@@ -1,8 +1,6 @@
 class Routes {
-  // Splash & Auth
+  // Splash
   static const String splash = '/';
-  static const String login = '/login';
-  static const String signup = '/signup';
 
   // Main
   static const String home = '/home';
