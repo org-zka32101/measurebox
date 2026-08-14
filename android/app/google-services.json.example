@@ -1,13 +1,29 @@
 {
-  "type": "service_account",
-  "project_id": "petit-works-utility",
-  "private_key_id": "YOUR_PRIVATE_KEY_ID",
-  "private_key": "YOUR_PRIVATE_KEY",
-  "client_email": "firebase-adminsdk-xxxxx@petit-works-utility.iam.gserviceaccount.com",
-  "client_id": "YOUR_CLIENT_ID",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-xxxxx%40petit-works-utility.iam.gserviceaccount.com",
-  "clientName": "com.petitworksapps.measuretracker"
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "petit-works-utility",
+    "storage_bucket": "petit-works-utility.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "com.petitworksapps.measuretracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "PLACEHOLDER_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
 }

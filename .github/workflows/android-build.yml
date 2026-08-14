@@ -1,0 +1,120 @@
+name: Android Build (CI Verification)
+
+# Builds a debug-signed release APK on every push/PR touching Android-
+# relevant files. This is a compile/regression check, not a Play Store
+# release pipeline — with no android/key.properties present, the release
+# build type falls back to the debug key (see android/app/build.gradle.kts),
+# so this cannot produce a Play Store-installable artifact on its own. See
+# ANDROID_BUILD_GUIDE.md for the manual, signed release process, and
+# android-release.yml for the automated signed-AAB workflow.
+#
+# Firebase: lib/firebase_options.dart and android/app/google-services.json
+# are both gitignored (contain project keys) and are NOT committed. This
+# workflow falls back to the checked-in `.example` placeholders so the build
+# can proceed unattended. That means Firebase itself will be non-functional
+# in this CI build (main.dart already catches Firebase init failures).
+# To build against the REAL Firebase project instead, add these repo secrets
+# (Settings > Secrets and variables > Actions):
+#   FIREBASE_OPTIONS_DART_BASE64   - base64 of a real lib/firebase_options.dart
+#   GOOGLE_SERVICES_JSON_BASE64    - base64 of a real google-services.json
+# Generate a base64 payload with: base64 -w0 lib/firebase_options.dart
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/android-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.44.9'
+
+jobs:
+  build-android:
+    name: Build & verify (Android, debug-signed release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Provide firebase_options.dart
+        run: |
+          if [ -n "${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}" ]; then
+            echo "${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}" | base64 --decode > lib/firebase_options.dart
+            echo "Using real firebase_options.dart from repo secret."
+          else
+            cp lib/firebase_options.dart.example lib/firebase_options.dart
+            echo "No FIREBASE_OPTIONS_DART_BASE64 secret set — using placeholder. Firebase will not actually connect in this build."
+          fi
+
+      - name: Provide google-services.json
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > android/app/google-services.json
+            echo "Using real google-services.json from repo secret."
+          else
+            cp android/app/google-services.json.example android/app/google-services.json
+            echo "No GOOGLE_SERVICES_JSON_BASE64 secret set — using placeholder."
+          fi
+
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Flutter analyze
+        # See ios-build.yml for why --no-fatal-infos/--no-fatal-warnings are
+        # needed: this project carries a large amount of pre-existing
+        # info/warning-level lint noise unrelated to any single workflow.
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Flutter test
+        run: flutter test
+
+      - name: Build APK (release, debug-signed — no key.properties present)
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeasureTracker-android-debug-signed-${{ github.sha }}
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 14
+          if-no-files-found: error

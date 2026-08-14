@@ -1,0 +1,154 @@
+name: Android Release (Signed AAB)
+
+# Builds a SIGNED, Play Store-ready Android App Bundle (.aab) and
+# (optionally) uploads it straight to Google Play. Unlike android-build.yml
+# (which verifies every push/PR with a debug-signed build), this workflow
+# only runs on demand or when you push a release tag, and requires a real
+# release keystore + Firebase credentials as repository secrets — see
+# ANDROID_RELEASE_SIGNING_SETUP.md for exactly what to generate and how.
+#
+# Every credential is decoded into a job-scoped, gitignored file and never
+# written to a log or committed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_play_store:
+        description: 'Upload the build to Google Play after signing'
+        type: boolean
+        default: false
+      play_store_track:
+        description: 'Google Play track to upload to'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+        default: internal
+  push:
+    tags:
+      - 'android-v*'
+
+env:
+  FLUTTER_VERSION: '3.44.9'
+
+jobs:
+  release-android:
+    name: Build & sign Android release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Require real Firebase configuration
+        # A release build must talk to the real Firebase project, so —
+        # unlike android-build.yml's CI-verification build — the placeholder
+        # fallback is not acceptable here; fail fast with a clear message.
+        run: |
+          if [ -z "${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}" ]; then
+            echo "::error::FIREBASE_OPTIONS_DART_BASE64 secret is not set. A release build must connect to the real Firebase project. See ANDROID_RELEASE_SIGNING_SETUP.md."
+            exit 1
+          fi
+          echo "${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}" | base64 --decode > lib/firebase_options.dart
+
+          if [ -z "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" ]; then
+            echo "::error::GOOGLE_SERVICES_JSON_BASE64 secret is not set. See ANDROID_RELEASE_SIGNING_SETUP.md."
+            exit 1
+          fi
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > android/app/google-services.json
+
+      - name: Install release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD secrets are all required. See ANDROID_RELEASE_SIGNING_SETUP.md."
+            exit 1
+          fi
+
+          KEYSTORE_PATH="$GITHUB_WORKSPACE/android/app/release.keystore.jks"
+          echo -n "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+
+          # android/app/build.gradle.kts reads this file (never committed —
+          # see android/.gitignore) to sign the "release" build type; with
+          # no key.properties present it silently falls back to the debug
+          # key instead, so this step is what actually turns on real signing.
+          cat > "$GITHUB_WORKSPACE/android/key.properties" <<PROPS
+          storeFile=$KEYSTORE_PATH
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPS
+
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build signed AAB
+        run: flutter build appbundle --release
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeasureTracker-${{ github.ref_name }}
+          path: build/app/outputs/bundle/release/*.aab
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Upload to Google Play
+        if: ${{ github.event.inputs.upload_to_play_store == 'true' || startsWith(github.ref, 'refs/tags/android-v') }}
+        env:
+          SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          if [ -z "$SERVICE_ACCOUNT_JSON_BASE64" ]; then
+            echo "No Google Play service account configured (GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64) — skipping Play Store upload."
+            echo "The signed AAB is still available as this run's workflow artifact; upload it manually via Play Console if needed."
+            exit 0
+          fi
+          echo "$SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
+          echo "PLAY_SERVICE_ACCOUNT_PATH=$RUNNER_TEMP/play-service-account.json" >> "$GITHUB_ENV"
+
+      - name: Publish to Google Play
+        if: ${{ (github.event.inputs.upload_to_play_store == 'true' || startsWith(github.ref, 'refs/tags/android-v')) && env.PLAY_SERVICE_ACCOUNT_PATH != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: ${{ env.PLAY_SERVICE_ACCOUNT_PATH }}
+          packageName: com.petitworksapps.measuretracker
+          releaseFiles: build/app/outputs/bundle/release/*.aab
+          track: ${{ github.event.inputs.play_store_track || 'internal' }}
+          status: completed
+
+      - name: Clean up signing material
+        if: always()
+        run: |
+          rm -f "$GITHUB_WORKSPACE/android/key.properties"
+          rm -f "$GITHUB_WORKSPACE/android/app/release.keystore.jks"
+          rm -f "$RUNNER_TEMP/play-service-account.json"
