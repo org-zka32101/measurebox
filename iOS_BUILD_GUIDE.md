@@ -64,7 +64,7 @@ base64 -i ios/Runner/GoogleService-Info.plist | pbcopy
 1. [Firebase Console](https://console.firebase.google.com/) にアクセス
 2. プロジェクト: `petit-works-utility` を選択
 3. iOS アプリ登録:
-   - Bundle ID: `com.petitworksapps.measuretracker`
+   - Bundle ID: `com.yourwish.measuretrackers`
    - App Store ID: (後で設定)
    - Team ID: (Apple Developer Account から取得)
 4. GoogleService-Info.plist をダウンロード
@@ -106,7 +106,7 @@ cd ..
 ```bash
 # Xcode で Runner → Signing & Capabilities
 # 1. Team を選択
-# 2. Bundle Identifier 確認: com.petitworksapps.measuretracker
+# 2. Bundle Identifier 確認: com.yourwish.measuretrackers
 # 3. Signing Certificate: "Automatic" 推奨
 ```
 
@@ -210,7 +210,7 @@ flutter run -d <device_id> --release
    - Platform: iOS
    - Name: `MeasureTracker`
    - Primary Language: Japanese
-   - Bundle ID: `com.petitworksapps.measuretracker`
+   - Bundle ID: `com.yourwish.measuretrackers`
    - SKU: 任意 (例: `measuretracker-001`)
 
 ### 2. メタデータ設定
@@ -388,4 +388,4 @@ version: 2.0.0+4  # メジャー更新
 **Last Updated**: 2026-08-06  
 **Status**: Phase 7 準備中  
 **iOS Minimum**: 13.0+  
-**Target Bundle ID**: com.petitworksapps.measuretracker
+**Target Bundle ID**: com.yourwish.measuretrackers

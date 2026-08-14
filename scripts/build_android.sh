@@ -42,7 +42,7 @@ fi
 if [ ! -f "$PROJECT_DIR/android/app/google-services.json" ]; then
     echo -e "${YELLOW}⚠ Warning: google-services.json not found${NC}"
     echo "Download from Firebase Console:"
-    echo "https://console.firebase.google.com/project/petit-works-utility/settings/general/android:com.petitworksapps.measuretracker"
+    echo "https://console.firebase.google.com/project/petit-works-utility/settings/general/android:com.yourwish.measuretrackers"
     echo ""
 fi
 

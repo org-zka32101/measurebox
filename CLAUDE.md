@@ -211,10 +211,10 @@ Before App Store/Google Play:
 **Last Updated**: 2026-08-06  
 **Status**: Phase 7.1 - iOS ビルド環境準備完成  
 **App Name**: MeasureTracker  
-**Package Name**: com.petitworksapps.measuretracker  
+**Package Name**: com.yourwish.measuretrackers  
 **Firebase**: Configured (petit-works-utility project)  
 **iOS Minimum**: 13.0+  
-**App Store Bundle ID**: com.petitworksapps.measuretracker  
+**App Store Bundle ID**: com.yourwish.measuretrackers  
 
 ### Phase 6 完成（元々）
   - ✅ ドキュメント（README/SETUP/PERFORMANCE）

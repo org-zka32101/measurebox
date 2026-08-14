@@ -82,7 +82,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: 'PLACEHOLDER_SENDER_ID',
     projectId: 'petit-works-utility',
     storageBucket: 'petit-works-utility.appspot.com',
-    iosBundleId: 'com.petitworksapps.measuretracker',
+    iosBundleId: 'com.yourwish.measuretrackers',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -91,6 +91,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: 'PLACEHOLDER_SENDER_ID',
     projectId: 'petit-works-utility',
     storageBucket: 'petit-works-utility.appspot.com',
-    iosBundleId: 'com.petitworksapps.measuretracker',
+    iosBundleId: 'com.yourwish.measuretrackers',
   );
 }

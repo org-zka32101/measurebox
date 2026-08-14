@@ -62,7 +62,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 ### 4.3: Android アプリを登録
 
 1. Firebase Console から「Android アプリを追加」
-2. パッケージ名: `com.petit.works.measurebox`
+2. パッケージ名: `com.yourwish.measuretrackers`
 3. アプリニックネーム: `MeasureBox` (オプション)
 4. SHA-1 フィンガープリント:
    ```bash
@@ -75,7 +75,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 ### 4.4: iOS アプリを登録
 
 1. Firebase Console から「iOS アプリを追加」
-2. Bundle ID: `com.petit.works.measurebox`
+2. Bundle ID: `com.yourwish.measuretrackers`
 3. アプリニックネーム: `MeasureBox` (オプション)
 4. `GoogleService-Info.plist` をダウンロード
 5. Xcode で `ios/Runner.xcworkspace` を開く
@@ -115,7 +115,7 @@ static const FirebaseOptions ios = FirebaseOptions(
   projectId: 'measurebox-YOUR_ID',
   databaseURL: 'https://measurebox-YOUR_ID.firebaseio.com',
   storageBucket: 'measurebox-YOUR_ID.appspot.com',
-  iosBundleId: 'com.petit.works.measurebox',
+  iosBundleId: 'com.yourwish.measuretrackers',
 );
 ```
 

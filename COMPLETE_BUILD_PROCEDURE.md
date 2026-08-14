@@ -66,7 +66,7 @@ https://console.firebase.google.com/project/petit-works-utility
 1. プロジェクト概要 → アプリを追加
 2. iOS を選択
 3. 以下を入力:
-   - Bundle ID: com.petitworksapps.measuretracker
+   - Bundle ID: com.yourwish.measuretrackers
    - App nickname: MeasureTracker
    - Team ID: (Apple Developer Account から取得)
 4. ダウンロードボタン → GoogleService-Info.plist
@@ -87,7 +87,7 @@ ls -la ios/Runner/GoogleService-Info.plist
 1. プロジェクト概要 → アプリを追加
 2. Android を選択
 3. 以下を入力:
-   - Package name: com.petitworksapps.measuretracker
+   - Package name: com.yourwish.measuretrackers
    - App nickname: MeasureTracker
    - SHA-1: (下記のコマンド出力から取得)
 
@@ -368,7 +368,7 @@ URL: https://appstoreconnect.apple.com/
    - Platform: iOS
    - Name: MeasureTracker
    - Primary Language: Japanese
-   - Bundle ID: com.petitworksapps.measuretracker
+   - Bundle ID: com.yourwish.measuretrackers
    - SKU: measuretracker-001
 
 **所要時間**: 10 分
@@ -437,7 +437,7 @@ URL: https://play.google.com/console/
    - Name: MeasureTracker
    - Default Language: 日本語
    - Category: ツール
-   - Package Name: com.petitworksapps.measuretracker
+   - Package Name: com.yourwish.measuretrackers
 
 **所要時間**: 10 分
 

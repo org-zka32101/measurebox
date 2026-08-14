@@ -82,7 +82,7 @@ echo -e "${YELLOW}[6/7] Validating iOS configuration...${NC}"
 if [ ! -f "$IOS_DIR/Runner/GoogleService-Info.plist" ]; then
     echo -e "${YELLOW}⚠ Warning: GoogleService-Info.plist not found${NC}"
     echo "Download from Firebase Console:"
-    echo "https://console.firebase.google.com/project/petit-works-utility/settings/general/ios:com.petitworksapps.measuretracker"
+    echo "https://console.firebase.google.com/project/petit-works-utility/settings/general/ios:com.yourwish.measuretrackers"
     echo ""
 fi
 

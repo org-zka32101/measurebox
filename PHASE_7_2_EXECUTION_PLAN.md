@@ -31,7 +31,7 @@ Project: petit-works-utility
 2. **iOS** を選択
 3. 以下を入力:
    ```
-   Bundle ID: com.petitworksapps.measuretracker
+   Bundle ID: com.yourwish.measuretrackers
    App nickname: MeasureTracker
    Team ID: (Apple Developer Account から取得)
    ```
@@ -57,7 +57,7 @@ ls -la ios/Runner/GoogleService-Info.plist
 2. **Android** を選択
 3. 以下を入力:
    ```
-   Package name: com.petitworksapps.measuretracker
+   Package name: com.yourwish.measuretrackers
    App nickname: MeasureTracker
    SHA-1: (下記で取得)
    ```

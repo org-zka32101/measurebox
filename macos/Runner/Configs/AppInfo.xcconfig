@@ -8,7 +8,7 @@
 PRODUCT_NAME = measurebox
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.petit.works.measurebox
+PRODUCT_BUNDLE_IDENTIFIER = com.yourwish.measuretrackers
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.petit.works. All rights reserved.

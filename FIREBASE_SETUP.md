@@ -37,7 +37,7 @@ flutterfire configure --project=petit-works-utility
 2. **iOS** を選択
 3. 以下を入力:
    ```
-   Bundle ID: com.petitworksapps.measuretracker
+   Bundle ID: com.yourwish.measuretrackers
    App nickname: MeasureTracker
    App Store ID: (後で設定可能)
    Team ID: (Apple Developer Account から取得)
@@ -73,7 +73,7 @@ open ios/Runner.xcworkspace
 2. **Android** を選択
 3. 以下を入力:
    ```
-   Package name: com.petitworksapps.measuretracker
+   Package name: com.yourwish.measuretrackers
    App nickname: MeasureTracker
    SHA-1: (後述)
    ```
