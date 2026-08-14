@@ -134,7 +134,7 @@ git push origin android-v1.0.0
 
 ### Google Playアップロードが失敗する
 - サービスアカウントがPlay Consoleに招待され、必要な権限が付与されているか確認
-- 対象パッケージ名（`com.petitworksapps.measuretracker`）で、Play Console上に
+- 対象パッケージ名（`com.yourwish.measuretrackers`）で、Play Console上に
   **最低1回の手動アップロード実績**があるか確認（初回公開はAPI経由不可）
 - versionCode（`pubspec.yaml` の `version: x.x.x+N` の `N`）が既存リリースと
   重複していないか確認

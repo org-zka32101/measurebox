@@ -63,7 +63,7 @@ base64 -i ios/Runner/GoogleService-Info.plist | pbcopy
 
 1. [Apple Developer Portal](https://developer.apple.com/account/resources/profiles/list) → Profiles → "+"
 2. **App Store** を選択（配布用）
-3. App ID: `com.petitworksapps.measuretracker` を選択
+3. App ID: `com.yourwish.measuretrackers` を選択
 4. 手順2で作成した Distribution証明書を選択
 5. Profile名を入力してダウンロード（.mobileprovision）
 6. base64化:
@@ -134,8 +134,8 @@ git push origin ios-v1.0.0
 - `.p12` のパスワードが `APPLE_CERTIFICATE_PASSWORD` と一致しているか確認
 - 証明書の種類が **Apple Distribution**（Apple Developmentではない）か確認
 
-### "No profiles for 'com.petitworksapps.measuretracker' were found"
-- Provisioning ProfileのApp IDが `com.petitworksapps.measuretracker` と完全一致しているか確認
+### "No profiles for 'com.yourwish.measuretrackers' were found"
+- Provisioning ProfileのApp IDが `com.yourwish.measuretrackers` と完全一致しているか確認
 - Provisioning Profileが期限切れでないか確認
 
 ### TestFlightアップロードが失敗する

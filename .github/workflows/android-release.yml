@@ -141,7 +141,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: ${{ env.PLAY_SERVICE_ACCOUNT_PATH }}
-          packageName: com.petitworksapps.measuretracker
+          packageName: com.yourwish.measuretrackers
           releaseFiles: build/app/outputs/bundle/release/*.aab
           track: ${{ github.event.inputs.play_store_track || 'internal' }}
           status: completed

@@ -58,7 +58,7 @@ base64 -w0 android/app/google-services.json
 1. [Firebase Console](https://console.firebase.google.com/) にアクセス
 2. プロジェクト: `petit-works-utility` を選択
 3. Android アプリ登録:
-   - Package Name: `com.petitworksapps.measuretracker`
+   - Package Name: `com.yourwish.measuretrackers`
    - SHA-1: (後述)
 4. google-services.json をダウンロード
 5. `android/app/` に配置
@@ -434,4 +434,4 @@ version: 2.0.0+4  # メジャー更新
 **Last Updated**: 2026-08-06  
 **Status**: Phase 7.2 準備中  
 **Android Minimum**: API 21  
-**Target Bundle ID**: com.petitworksapps.measuretracker
+**Target Bundle ID**: com.yourwish.measuretrackers

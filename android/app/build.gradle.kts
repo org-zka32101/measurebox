@@ -22,7 +22,7 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace = "com.petitworksapps.measuretracker"
+    namespace = "com.yourwish.measuretrackers"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
@@ -33,7 +33,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.petitworksapps.measuretracker"
+        applicationId = "com.yourwish.measuretrackers"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

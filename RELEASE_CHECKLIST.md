@@ -133,8 +133,11 @@
 
 #### 4.1 App Store Connect 登録
 - [x] Apple Developer Account にログイン
-- [x] 新規アプリ登録完了
-- [x] Bundle ID: com.petitworksapps.measuretracker 設定
+- [x] 新規アプリ登録完了（⚠️ 旧 Bundle ID `com.petitworksapps.measuretracker` で登録済み。
+      Bundle ID をコード側で `com.yourwish.measuretrackers` に変更したため、
+      App Store Connect 側で Bundle ID の再登録／新規アプリ作成が必要。
+      Bundle ID は App Store Connect 上で後から変更不可）
+- [ ] Bundle ID: com.yourwish.measuretrackers で App Store Connect に再登録
 - [ ] Initial Release Date: 2026-08-31
 
 #### 4.2 メタデータ
@@ -217,7 +220,7 @@
 #### 5.1 Google Play Console 登録
 - [ ] Google Play Console にログイン
 - [ ] 新規アプリ登録完了
-- [ ] Package Name: com.petitworksapps.measuretracker
+- [ ] Package Name: com.yourwish.measuretrackers
 - [ ] Category: ツール/ユーティリティ
 
 #### 5.2 メタデータ
