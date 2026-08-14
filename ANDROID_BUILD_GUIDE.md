@@ -1,6 +1,45 @@
 # Android ビルド & リリース準備ガイド - Phase 7
 
-## 📋 Android ビルド前チェックリスト
+## 🤖 GitHub Actions での自動ビルド（CI検証）
+
+`main` への push / PR の度に、GitHub 提供の Ubuntu ランナー上で **デバッグ署名の
+release APK** を自動ビルドするワークフローを追加しました: `.github/workflows/android-build.yml`
+
+**実施内容**: `flutter pub get` → Firebase設定配置 → `flutter analyze` →
+`flutter test` → `flutter build apk --release`。成功するとAPKを
+Actions の Artifacts からダウンロードできます。
+
+### できること / できないこと
+
+| 項目 | 対応 |
+|------|------|
+| コンパイルが通るかの継続的検証 | ✅ 自動 |
+| Google Play への提出物（署名済みAAB） | ❌（`android-release.yml` を使用、後述） |
+
+### Firebase 設定（CI用）
+`lib/firebase_options.dart` と `android/app/google-services.json` は
+`.gitignore` 対象のため、CI では既定でリポジトリ内の `*.example` プレースホルダを
+使用します（＝この状態でビルドされたアプリは Firebase に接続できません）。
+
+実際の Firebase プロジェクトに接続した状態でCIビルドしたい場合は、リポジトリの
+**Settings → Secrets and variables → Actions** に以下を追加してください:
+
+```bash
+base64 -w0 lib/firebase_options.dart
+# → FIREBASE_OPTIONS_DART_BASE64 として登録
+
+base64 -w0 android/app/google-services.json
+# → GOOGLE_SERVICES_JSON_BASE64 として登録
+```
+
+### 署名済みAAB（Google Play提出用）✅ 実装済み
+`.github/workflows/android-release.yml` で、署名済みAABの生成とGoogle Playへの
+自動アップロードに対応しています。Keystore等のSecrets設定方法は
+**ANDROID_RELEASE_SIGNING_SETUP.md** を参照してください。
+
+---
+
+## 📋 Android ビルド前チェックリスト（手動ビルド）
 
 ### 1. 環境準備
 - [ ] Android Studio 2024.1+ がインストールされている
@@ -77,12 +116,16 @@ keystore_password: (安全に管理)
 key_password: (安全に管理)
 ```
 
-### 5. gradle.properties 設定（リリース用）
+### 5. key.properties 設定（リリース署名用）✅ 実装済み
 
-`android/gradle.properties` に以下を追加:
+`android/app/build.gradle.kts` は `android/key.properties` の有無を見て、
+存在すればそれで署名し、無ければ従来通りデバッグ鍵にフォールバックします
+（`flutter build apk --release` がCI検証ビルドで引き続き動く理由）。
+
+ローカルでリリース署名する場合、`android/key.properties`（**リポジトリ直下ではなく
+`android/` フォルダ直下**）を作成:
 
 ```properties
-# Release Keystore Configuration
 storeFile=/Users/your_username/measuretracker-release.jks
 storePassword=your_store_password
 keyAlias=measuretracker
@@ -90,8 +133,10 @@ keyPassword=your_key_password
 ```
 
 **セキュリティ注意**:
-- `gradle.properties` は `.gitignore` に追加
-- パスワードは環境変数で管理推奨
+- `key.properties` と `*.jks`/`*.keystore` は `android/.gitignore` に既に
+  登録されているため、誤ってコミットされることはありません
+- GitHub Actions での自動署名は `android-release.yml` が
+  Secretsから同等のファイルを動的生成します（`ANDROID_RELEASE_SIGNING_SETUP.md` 参照）
 
 ---
 
