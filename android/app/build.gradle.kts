@@ -23,7 +23,13 @@ if (hasReleaseSigning) {
 
 android {
     namespace = "com.yourwish.measuretrackers"
-    compileSdk = 35
+    // Tracks Flutter's own recommended value instead of a hardcoded number:
+    // a pinned compileSdk (35) fell behind what the integration_test plugin
+    // requires (36), which failed CI with "share_plus is currently compiled
+    // against android-33" / AAR metadata check errors — plugins that don't
+    // themselves specify a higher compileSdk fall back to whatever the app
+    // module resolves, and an outdated pin here breaks that resolution.
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
