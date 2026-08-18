@@ -11,7 +11,8 @@
 /// measurement was added.
 enum MeasurementCategory {
   sound, // 騒音（dB）
-  vibration; // 振動
+  vibration, // 振動
+  illuminance; // 照度（Android専用 — IlluminanceServiceのドキュメント参照）
 
   String get label {
     switch (this) {
@@ -19,6 +20,8 @@ enum MeasurementCategory {
         return '騒音';
       case MeasurementCategory.vibration:
         return '振動';
+      case MeasurementCategory.illuminance:
+        return '照度';
     }
   }
 }

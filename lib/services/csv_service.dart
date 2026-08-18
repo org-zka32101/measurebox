@@ -13,9 +13,10 @@ class CSVService {
     required String projectName,
   }) async {
     // Prepare headers.
-    // 種別・振動列を追加: dB列は騒音測定のみ、振動列は振動測定のみに値が
-    // 入る（もう一方は空欄）。1つのCSVで両方のカテゴリを扱えるようにする
-    // ため、列を分けて空欄にする方式を採用（値を混在させない）。
+    // 種別・振動・照度列を追加: dB/振動/照度の各列はそれぞれのカテゴリの
+    // 測定にのみ値が入る（他のカテゴリでは空欄）。1つのCSVで全カテゴリを
+    // 扱えるようにするため、列を分けて空欄にする方式を採用（値を混在
+    // させない）。
     final List<List<String>> rows = [
       [
         '日時',
@@ -29,6 +30,10 @@ class CSVService {
         '振動最小(m/s²)',
         '振動平均(m/s²)',
         '振動最大(m/s²)',
+        '照度値(lux)',
+        '照度最小(lux)',
+        '照度平均(lux)',
+        '照度最大(lux)',
         '緯度',
         '経度',
         '測定時間(秒)',
@@ -39,22 +44,35 @@ class CSVService {
     // Add data rows
     final dateFormatter = DateFormat(csvDateFormat);
     for (final measurement in measurements) {
-      final isVibration =
-          measurement.measurementCategory == MeasurementCategory.vibration;
+      final category = measurement.measurementCategory;
+      final isVibration = category == MeasurementCategory.vibration;
+      final isIlluminance = category == MeasurementCategory.illuminance;
       rows.add([
         dateFormatter.format(measurement.timestamp),
         projectName,
-        measurement.measurementCategory.label,
-        isVibration ? '' : measurement.dbValue.toStringAsFixed(1),
-        isVibration ? '' : measurement.dbMin.toStringAsFixed(1),
-        isVibration ? '' : measurement.dbAvg.toStringAsFixed(1),
-        isVibration ? '' : measurement.dbMax.toStringAsFixed(1),
+        category.label,
+        isVibration || isIlluminance
+            ? ''
+            : measurement.dbValue.toStringAsFixed(1),
+        isVibration || isIlluminance
+            ? ''
+            : measurement.dbMin.toStringAsFixed(1),
+        isVibration || isIlluminance
+            ? ''
+            : measurement.dbAvg.toStringAsFixed(1),
+        isVibration || isIlluminance
+            ? ''
+            : measurement.dbMax.toStringAsFixed(1),
         isVibration
             ? (measurement.vibrationValue ?? 0.0).toStringAsFixed(2)
             : '',
         isVibration ? (measurement.vibrationMin ?? 0.0).toStringAsFixed(2) : '',
         isVibration ? (measurement.vibrationAvg ?? 0.0).toStringAsFixed(2) : '',
         isVibration ? (measurement.vibrationMax ?? 0.0).toStringAsFixed(2) : '',
+        isIlluminance ? '${measurement.luxValue ?? 0}' : '',
+        isIlluminance ? '${measurement.luxMin ?? 0}' : '',
+        isIlluminance ? (measurement.luxAvg ?? 0.0).toStringAsFixed(1) : '',
+        isIlluminance ? '${measurement.luxMax ?? 0}' : '',
         measurement.latitude?.toStringAsFixed(6) ?? '',
         measurement.longitude?.toStringAsFixed(6) ?? '',
         (measurement.durationMs / 1000).toStringAsFixed(1),

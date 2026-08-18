@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/strings.dart';
@@ -7,6 +8,7 @@ import '../../models/measurement_model.dart';
 import '../../models/measurement_type.dart';
 import '../../services/audio_service.dart';
 import '../../services/frequency_analysis_service.dart';
+import '../../services/illuminance_service.dart';
 import '../../services/location_service.dart';
 import '../../services/vibration_service.dart';
 import '../../providers/measurement_provider.dart';
@@ -31,6 +33,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     with SingleTickerProviderStateMixin {
   late AudioService _audioService;
   late VibrationService _vibrationService;
+  late IlluminanceService _illuminanceService;
   late TabController _tabController;
   bool _isMeasuring = false;
   double _currentDb = 0.0;
@@ -46,13 +49,25 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   double _avgVibration = 0.0;
   double _maxVibration = 0.0;
 
+  // 照度タブ — Android専用（IlluminanceServiceのドキュメント参照）。
+  // iOSでは _showIlluminanceTab が false になり、タブ自体を表示しない。
+  late final bool _showIlluminanceTab;
+  // null=判定中、true=利用可能、false=この端末には照度センサーが無い。
+  bool? _illuminanceAvailable;
+  int _currentLux = 0;
+  int _minLux = 0;
+  double _avgLux = 0.0;
+  int _maxLux = 0;
+
   MeasurementModel? _lastMeasurement;
 
-  // TabController.index==2 (振動タブ) かどうか。音量/周波数タブは
-  // AudioServiceによる1回の録音セッションから両方のデータを同時取得する
-  // 既存の挙動を維持しつつ、振動は完全に別の測定モードとして扱う
-  // （1件の測定は必ずどちらか一方のcategoryになるため）。
+  // 音量/周波数タブはAudioServiceによる1回の録音セッションから両方の
+  // データを同時取得する既存の挙動を維持しつつ、振動・照度はそれぞれ
+  // 完全に別の測定モードとして扱う（1件の測定は必ずいずれか一方の
+  // categoryになるため）。
   bool get _isVibrationTab => _tabController.index == 2;
+  bool get _isIlluminanceTab =>
+      _showIlluminanceTab && _tabController.index == 3;
 
   // 対策前後比較の対象として記録するかどうかのタグ付け。既存の
   // MeasurementType (単発/対策前/対策後) はモデル・Firestore保存では
@@ -73,9 +88,19 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     super.initState();
     _audioService = AudioService();
     _vibrationService = VibrationService();
-    _tabController = TabController(length: 3, vsync: this);
+    _illuminanceService = IlluminanceService();
+    _showIlluminanceTab = Platform.isAndroid;
+    _tabController = TabController(
+      length: _showIlluminanceTab ? 4 : 3,
+      vsync: this,
+    );
     _memoController = TextEditingController();
     _checkMicrophonePermission();
+    if (_showIlluminanceTab) {
+      IlluminanceService.isAvailable().then((available) {
+        if (mounted) setState(() => _illuminanceAvailable = available);
+      });
+    }
   }
 
   @override
@@ -84,6 +109,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
       _audioService.stopMeasurement();
       _audioService.stopFrequencyMeasurement();
       _vibrationService.stopMeasurement();
+      _illuminanceService.stopMeasurement();
     }
     _tabController.dispose();
     _memoController.dispose();
@@ -116,6 +142,43 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   }
 
   void _startMeasuring() async {
+    if (_isIlluminanceTab) {
+      if (_illuminanceAvailable != true) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('この端末には照度センサーがありません')));
+        return;
+      }
+      try {
+        await _illuminanceService.startMeasurement(
+          onLuxChange: (current, min, max, avg) {
+            setState(() {
+              _currentLux = current;
+              _minLux = min;
+              _maxLux = max;
+              _avgLux = avg;
+            });
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() => _isMeasuring = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(friendlyErrorMessage(error))),
+              );
+            }
+          },
+        );
+        setState(() => _isMeasuring = true);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        }
+      }
+      return;
+    }
+
     if (_isVibrationTab) {
       // 加速度センサーはマイクと違いOSの実行時権限が不要（VibrationService
       // のドキュメント参照）なので権限チェックは行わない。
@@ -186,6 +249,45 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   }
 
   Future<void> _stopMeasuring() async {
+    if (_isIlluminanceTab) {
+      try {
+        final durationMs = DateTime.now()
+            .difference(_illuminanceService.startTime ?? DateTime.now())
+            .inMilliseconds;
+
+        await _illuminanceService.stopMeasurement();
+
+        _lastMeasurement = MeasurementModel(
+          id: '',
+          projectId: widget.projectId,
+          type: 0,
+          category: MeasurementCategory.illuminance.index,
+          // dB系フィールドはこのカテゴリでは使わないプレースホルダ
+          // （measurement_provider.dart参照）。
+          dbValue: 0.0,
+          dbMin: 0.0,
+          dbAvg: 0.0,
+          dbMax: 0.0,
+          durationMs: durationMs,
+          timestamp: DateTime.now(),
+          memo: null,
+          luxValue: _currentLux,
+          luxMin: _minLux,
+          luxAvg: _avgLux,
+          luxMax: _maxLux,
+        );
+
+        setState(() => _isMeasuring = false);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        }
+      }
+      return;
+    }
+
     if (_isVibrationTab) {
       try {
         final durationMs = DateTime.now()
@@ -268,8 +370,8 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   Future<void> _saveMeasurement() async {
     if (_lastMeasurement == null) return;
 
-    final isVibration =
-        _lastMeasurement!.measurementCategory == MeasurementCategory.vibration;
+    final isSound =
+        _lastMeasurement!.measurementCategory == MeasurementCategory.sound;
 
     double? latitude;
     double? longitude;
@@ -296,11 +398,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
 
     try {
       // Settings画面で設定したマイク校正オフセットはdB測定にのみ意味を持つ
-      // (createMeasurement内でdbValue/min/avg/maxに加算される)。振動測定
-      // では常に0とする。
-      final calibrationOffset = isVibration
-          ? 0.0
-          : ref.read(calibrationProvider);
+      // (createMeasurement内でdbValue/min/avg/maxに加算される)。
+      // 振動・照度測定では常に0とする。
+      final calibrationOffset = isSound ? ref.read(calibrationProvider) : 0.0;
       await ref
           .read(measurementProvider.notifier)
           .createMeasurement(
@@ -323,6 +423,10 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             vibrationMax: _lastMeasurement!.vibrationMax,
             latitude: latitude,
             longitude: longitude,
+            luxValue: _lastMeasurement!.luxValue,
+            luxMin: _lastMeasurement!.luxMin,
+            luxAvg: _lastMeasurement!.luxAvg,
+            luxMax: _lastMeasurement!.luxMax,
           );
 
       if (mounted) {
@@ -379,6 +483,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                 Tab(text: AppStrings.volumeTab),
                 Tab(text: AppStrings.frequencyTab),
                 Tab(text: AppStrings.vibrationTab),
+                if (_showIlluminanceTab) Tab(text: AppStrings.illuminanceTab),
               ],
             ),
           ),
@@ -423,6 +528,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                 _buildVolumeTab(context),
                 _buildFrequencyTab(context),
                 _buildVibrationTab(context),
+                if (_showIlluminanceTab) _buildIlluminanceTab(context),
               ],
             ),
           ),
@@ -526,6 +632,10 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                                         _minVibration = 0;
                                         _avgVibration = 0;
                                         _maxVibration = 0;
+                                        _currentLux = 0;
+                                        _minLux = 0;
+                                        _avgLux = 0;
+                                        _maxLux = 0;
                                         _memoController.clear();
                                         _selectedType = MeasurementType.single;
                                         setState(() {});
@@ -770,6 +880,105 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                       _buildStatColumn(
                         '最大',
                         '${(_isMeasuring ? _maxVibration : _lastMeasurement?.vibrationMax ?? 0.0).toStringAsFixed(2)} m/s²',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 照度は「多いほど悪い」dB/振動と違い、暗すぎる/明るすぎるのどちらが
+  // 問題かは用途次第（JIS等の作業環境照度基準はあるが、対象作業や業種に
+  // よって適正値が大きく異なる）。そのため安全/注意/危険のような一律の
+  // 判定バッジは付けず、実測値をそのまま提示するに留める。
+  Widget _buildIlluminanceTab(BuildContext context) {
+    if (_illuminanceAvailable == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_illuminanceAvailable == false) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.light_mode_outlined,
+                size: 44,
+                color: textSecondary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'この端末には照度センサーがありません',
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final displayLux = _isMeasuring
+        ? _currentLux
+        : (_lastMeasurement?.luxValue ?? 0);
+
+    return SingleChildScrollView(
+      child: Center(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$displayLux',
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'lux',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatColumn(
+                        '最小',
+                        '${_isMeasuring ? _minLux : _lastMeasurement?.luxMin ?? 0} lux',
+                      ),
+                      _buildStatColumn(
+                        '平均',
+                        '${(_isMeasuring ? _avgLux : _lastMeasurement?.luxAvg ?? 0.0).toStringAsFixed(0)} lux',
+                      ),
+                      _buildStatColumn(
+                        '最大',
+                        '${_isMeasuring ? _maxLux : _lastMeasurement?.luxMax ?? 0} lux',
                       ),
                     ],
                   ),

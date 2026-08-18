@@ -344,31 +344,55 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                       itemCount: sortedMeasurements.length,
                       itemBuilder: (context, index) {
                         final measurement = sortedMeasurements[index];
-                        final isVibration =
-                            measurement.measurementCategory ==
-                            MeasurementCategory.vibration;
-                        // 騒音(dB)と振動(m/s²)は単位も安全閾値も異なるため、
-                        // categoryに応じて表示する値・色・ラベルを出し分ける。
-                        final displayValue = isVibration
-                            ? (measurement.vibrationValue ?? 0.0)
-                            : measurement.dbValue;
-                        final minValue = isVibration
-                            ? (measurement.vibrationMin ?? 0.0)
-                            : measurement.dbMin;
-                        final avgValue = isVibration
-                            ? (measurement.vibrationAvg ?? 0.0)
-                            : measurement.dbAvg;
-                        final maxValue = isVibration
-                            ? (measurement.vibrationMax ?? 0.0)
-                            : measurement.dbMax;
-                        final unit = isVibration ? 'm/s²' : 'dB';
-                        final decimals = isVibration ? 2 : 1;
-                        final statusColor = isVibration
-                            ? _getVibrationStatusColor(displayValue)
-                            : _getStatusColor(displayValue);
-                        final statusLabel = isVibration
-                            ? _getVibrationStatusLabel(displayValue)
-                            : _getStatusLabel(displayValue);
+                        final category = measurement.measurementCategory;
+                        final showCategoryBadge =
+                            category != MeasurementCategory.sound;
+                        // 騒音(dB)・振動(m/s²)・照度(lux)は単位も表示方法も
+                        // 異なるため、categoryに応じて出し分ける。照度は
+                        // 「多いほど悪い」という前提が成り立たない指標
+                        // （用途次第で適正値が変わる）ため、safe/warning/
+                        // dangerのような判定バッジは付けない
+                        // （statusColor/statusLabelがnullのまま = バッジ非表示）。
+                        final double displayValue;
+                        final double minValue;
+                        final double avgValue;
+                        final double maxValue;
+                        final String unit;
+                        final int decimals;
+                        Color? statusColor;
+                        String? statusLabel;
+                        switch (category) {
+                          case MeasurementCategory.vibration:
+                            displayValue = measurement.vibrationValue ?? 0.0;
+                            minValue = measurement.vibrationMin ?? 0.0;
+                            avgValue = measurement.vibrationAvg ?? 0.0;
+                            maxValue = measurement.vibrationMax ?? 0.0;
+                            unit = 'm/s²';
+                            decimals = 2;
+                            statusColor = _getVibrationStatusColor(
+                              displayValue,
+                            );
+                            statusLabel = _getVibrationStatusLabel(
+                              displayValue,
+                            );
+                          case MeasurementCategory.illuminance:
+                            displayValue = (measurement.luxValue ?? 0)
+                                .toDouble();
+                            minValue = (measurement.luxMin ?? 0).toDouble();
+                            avgValue = measurement.luxAvg ?? 0.0;
+                            maxValue = (measurement.luxMax ?? 0).toDouble();
+                            unit = 'lux';
+                            decimals = 0;
+                          case MeasurementCategory.sound:
+                            displayValue = measurement.dbValue;
+                            minValue = measurement.dbMin;
+                            avgValue = measurement.dbAvg;
+                            maxValue = measurement.dbMax;
+                            unit = 'dB';
+                            decimals = 1;
+                            statusColor = _getStatusColor(displayValue);
+                            statusLabel = _getStatusLabel(displayValue);
+                        }
                         final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
 
                         return Dismissible(
@@ -429,18 +453,16 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                               context,
                                             ).textTheme.bodySmall,
                                           ),
-                                          if (isVibration ||
+                                          if (showCategoryBadge ||
                                               measurement.measurementType !=
                                                   MeasurementType.single) ...[
                                             const SizedBox(height: 4),
                                             Wrap(
                                               spacing: 6,
                                               children: [
-                                                if (isVibration)
+                                                if (showCategoryBadge)
                                                   _categoryBadge(
-                                                    measurement
-                                                        .measurementCategory
-                                                        .label,
+                                                    category.label,
                                                   ),
                                                 if (measurement
                                                         .measurementType !=
@@ -455,29 +477,31 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                           ],
                                         ],
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withOpacity(0.1),
-                                          border: Border.all(
-                                            color: statusColor,
+                                      if (statusColor != null &&
+                                          statusLabel != null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            16,
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.1),
+                                            border: Border.all(
+                                              color: statusColor,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            statusLabel,
+                                            style: TextStyle(
+                                              color: statusColor,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12,
+                                            ),
                                           ),
                                         ),
-                                        child: Text(
-                                          statusLabel,
-                                          style: TextStyle(
-                                            color: statusColor,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 12),

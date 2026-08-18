@@ -210,5 +210,41 @@ void main() {
       expect(restored.latitude, equals(35.681236));
       expect(restored.longitude, equals(139.767125));
     });
+
+    test(
+      'toFirestore/fromFirestore round-trips an illuminance measurement',
+      () {
+        final measurement = MeasurementModel(
+          id: '1',
+          projectId: 'proj1',
+          type: 0,
+          dbValue: 0.0,
+          dbMin: 0.0,
+          dbAvg: 0.0,
+          dbMax: 0.0,
+          durationMs: 5000,
+          timestamp: DateTime(2026, 6, 14, 10, 30),
+          category: MeasurementCategory.illuminance.index,
+          luxValue: 320,
+          luxMin: 280,
+          luxAvg: 305.5,
+          luxMax: 340,
+        );
+
+        final firestore = measurement.toFirestore();
+        expect(firestore['category'], equals('illuminance'));
+        expect(firestore['lux_value'], equals(320));
+        expect(firestore['lux_min'], equals(280));
+        expect(firestore['lux_avg'], equals(305.5));
+        expect(firestore['lux_max'], equals(340));
+
+        final restored = MeasurementModel.fromFirestore(firestore, 'proj1');
+        expect(restored.measurementCategory, MeasurementCategory.illuminance);
+        expect(restored.luxValue, equals(320));
+        expect(restored.luxMin, equals(280));
+        expect(restored.luxAvg, equals(305.5));
+        expect(restored.luxMax, equals(340));
+      },
+    );
   });
 }
