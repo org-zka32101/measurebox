@@ -36,13 +36,15 @@ class MeasurementModelAdapter extends TypeAdapter<MeasurementModel> {
       vibrationMin: fields[16] as double?,
       vibrationAvg: fields[17] as double?,
       vibrationMax: fields[18] as double?,
+      latitude: fields[19] as double?,
+      longitude: fields[20] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MeasurementModel obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -80,7 +82,11 @@ class MeasurementModelAdapter extends TypeAdapter<MeasurementModel> {
       ..writeByte(17)
       ..write(obj.vibrationAvg)
       ..writeByte(18)
-      ..write(obj.vibrationMax);
+      ..write(obj.vibrationMax)
+      ..writeByte(19)
+      ..write(obj.latitude)
+      ..writeByte(20)
+      ..write(obj.longitude);
   }
 
   @override

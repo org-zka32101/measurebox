@@ -75,6 +75,11 @@
 	     moment motion data is accessed. -->
 	<key>NSMotionUsageDescription</key>
 	<string>加速度センサーを使用して振動を測定します。測定データはあなたのデバイスにのみ保存されます。</string>
+	<!-- Location permission for GPS tagging (geolocator). Only requested
+	     when the user opts in via the switch on the Measure screen — the
+	     app never tracks location in the background. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>測定した場所を記録するために位置情報を使用します。位置情報はあなたが位置情報タグ付けをオンにした場合のみ取得されます。</string>
 	<!-- App Tracking Transparency -->
 	<key>NSUserTrackingUsageDescription</key>
 	<string>あなたの測定データを分析して、アプリの改善に役立てます。</string>
