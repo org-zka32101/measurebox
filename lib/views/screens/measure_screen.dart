@@ -6,6 +6,8 @@ import '../../models/measurement_model.dart';
 import '../../services/audio_service.dart';
 import '../../services/frequency_analysis_service.dart';
 import '../../providers/measurement_provider.dart';
+import '../../providers/settings_provider.dart';
+import '../../utils/error_messages.dart';
 import '../widgets/decibel_gauge.dart';
 import '../widgets/frequency_spectrum_widget.dart';
 import '../widgets/frequency_details_card.dart';
@@ -110,7 +112,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: $e')),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
     }
@@ -146,7 +148,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: $e')),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
     }
@@ -156,6 +158,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     if (_lastMeasurement == null) return;
 
     try {
+      // Settings画面で設定したマイク校正オフセットを反映する
+      // (createMeasurement内でdbValue/min/avg/maxに加算される)。
+      final calibrationOffset = ref.read(calibrationProvider);
       await ref.read(measurementProvider.notifier).createMeasurement(
             userId: MeasureScreen.guestUserId,
             projectId: widget.projectId,
@@ -165,6 +170,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             dbMax: _lastMeasurement!.dbMax,
             durationMs: _lastMeasurement!.durationMs,
             memo: _memoController.text.isEmpty ? null : _memoController.text,
+            calibrationOffset: calibrationOffset,
             peakFrequency: _lastMeasurement!.peakFrequency,
             dominantFrequencies: _lastMeasurement!.dominantFrequencies,
           );
@@ -178,7 +184,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: $e')),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
     }
@@ -343,31 +349,38 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
               isAnimating: _isMeasuring,
             ),
 
-            // 現在のステータスバッジ（測定中）
-            if (_isMeasuring) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _statusColor(_currentDb).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.circle, size: 10, color: _statusColor(_currentDb)),
-                    const SizedBox(width: 8),
-                    Text(
-                      _statusLabel(_currentDb),
-                      style: TextStyle(
-                        color: _statusColor(_currentDb),
-                        fontWeight: FontWeight.bold,
-                      ),
+            // 現在のステータスバッジ（測定中、および測定停止後の確認中も
+            // 表示し続ける。停止直後に安全/注意/危険の文脈が消えると、
+            // ユーザーは保存前にdBの数値だけを見て判断することになる）
+            if (_isMeasuring || _lastMeasurement != null) ...[
+              Builder(builder: (context) {
+                final displayDb = _lastMeasurement?.dbValue ?? _currentDb;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _statusColor(displayDb).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ],
-                ),
-              ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, size: 10, color: _statusColor(displayDb)),
+                        const SizedBox(width: 8),
+                        Text(
+                          _statusLabel(displayDb),
+                          style: TextStyle(
+                            color: _statusColor(displayDb),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ],
 
             const SizedBox(height: 24),

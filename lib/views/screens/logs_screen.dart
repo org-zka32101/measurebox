@@ -7,6 +7,8 @@ import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';
 import '../../providers/measurement_provider.dart';
 import '../../services/csv_service.dart';
+import '../../utils/error_messages.dart';
+import '../widgets/error_state_view.dart';
 import '../widgets/measurement_chart.dart';
 
 class LogsScreen extends ConsumerStatefulWidget {
@@ -124,7 +126,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: $e')),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
     }
@@ -146,13 +148,12 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.download),
-            onPressed: () {
-              final measurements = measurementsAsync.valueOrNull;
-              if (measurements != null) {
-                _exportCSV(context, measurements);
-              }
-            },
-            tooltip: AppStrings.exportCSV,
+            onPressed: measurementsAsync.hasValue
+                ? () => _exportCSV(context, measurementsAsync.value!)
+                : null,
+            tooltip: measurementsAsync.hasValue
+                ? AppStrings.exportCSV
+                : '読み込み中です',
           ),
         ],
       ),
@@ -332,8 +333,10 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         loading: () => const Center(
           child: CircularProgressIndicator(),
         ),
-        error: (error, stackTrace) => Center(
-          child: Text('エラー: $error'),
+        error: (error, stackTrace) => ErrorStateView(
+          error: error,
+          onRetry: () =>
+              ref.invalidate(measurementsByProjectProvider(widget.projectId)),
         ),
       ),
     );

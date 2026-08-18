@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../models/project_model.dart';
+import 'confirm_delete_dialog.dart';
 
 class ProjectCard extends StatelessWidget {
   final ProjectModel project;
   final VoidCallback onTap;
-  final VoidCallback? onDelete;
+  final Future<void> Function()? onDelete;
 
   const ProjectCard({
     super.key,
@@ -84,7 +85,7 @@ class ProjectCard extends StatelessWidget {
                   ),
                   itemBuilder: (context) => [
                     PopupMenuItem(
-                      onTap: () => _showDeleteConfirmDialog(context, onDelete!),
+                      onTap: () => _handleDelete(context),
                       child: const Row(
                         children: [
                           Icon(Icons.delete_outline_rounded,
@@ -105,33 +106,15 @@ class ProjectCard extends StatelessWidget {
     );
   }
 
-  void _showDeleteConfirmDialog(BuildContext context, VoidCallback onConfirm) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('プロジェクトを削除しますか？'),
-        content: Text(
-          '「${project.name}」と関連するすべてのデータが削除されます。\nこの操作は取り消せません。',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('キャンセル'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onConfirm();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: dangerColor,
-            ),
-            child: const Text('削除'),
-          ),
-        ],
-      ),
+  Future<void> _handleDelete(BuildContext context) async {
+    if (onDelete == null) return;
+    final confirmed = await confirmDeleteProjectDialog(
+      context,
+      projectName: project.name,
     );
+    if (confirmed) {
+      await onDelete!();
+    }
   }
 
   String _formatDate(DateTime date) {

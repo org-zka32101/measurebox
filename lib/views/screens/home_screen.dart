@@ -5,6 +5,7 @@ import '../../constants/colors.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/project_card.dart';
 import '../widgets/new_project_dialog.dart';
+import '../widgets/error_state_view.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -28,6 +29,7 @@ class HomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: AppStrings.settings,
             onPressed: () {
               Navigator.of(context).pushNamed('/settings');
             },
@@ -140,11 +142,21 @@ class HomeScreen extends ConsumerWidget {
                       arguments: project.id,
                     );
                   },
-                  onDelete: () {
-                    ref.read(projectProvider.notifier).deleteProject(
+                  onDelete: () async {
+                    await ref.read(projectProvider.notifier).deleteProject(
                           userId: guestUserId,
                           projectId: project.id,
                         );
+                    if (!context.mounted) return;
+                    final result = ref.read(projectProvider);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result.hasError
+                            ? '削除に失敗しました。もう一度お試しください。'
+                            : 'プロジェクトを削除しました'),
+                        backgroundColor: result.hasError ? dangerColor : null,
+                      ),
+                    );
                   },
                 ),
               );
@@ -154,8 +166,9 @@ class HomeScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(),
         ),
-        error: (error, stackTrace) => Center(
-          child: Text('エラー: $error'),
+        error: (error, stackTrace) => ErrorStateView(
+          error: error,
+          onRetry: () => ref.invalidate(projectsStreamProvider),
         ),
       ),
       floatingActionButton: projectsAsync.maybeWhen(
