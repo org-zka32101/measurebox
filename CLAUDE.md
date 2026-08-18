@@ -323,6 +323,24 @@ Before App Store/Google Play:
 - 📝 マイク入力は引き続きシミュレーション（dB測定と同じ方針）、FFT/解析パイプライン自体は本物のロジック
 - ⚠️ Android/iOSのネイティブビルド（APK/IPA）は未実施（Android SDK取得が環境のエグレスポリシーでブロック、iOSはmacOS+Xcode必須のため）。開発者環境で実施要
 
-**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定機能実装（検証済み）  
+### 振動測定機能 ✅ **コード実装完了・実センサー対応** (2026-08-18)
+- ✅ VibrationService（`sensors_plus`パッケージ、加速度センサーの実データを使用 —
+  dB/周波数測定と異なりシミュレーションではない。OSの実行時権限も不要）
+- ✅ MeasureScreen 3タブ化（音量/周波数/振動）。振動は音量/周波数とは
+  独立した測定モード（1件の測定は必ずsound/vibrationいずれか一方のcategory）
+- ✅ MeasurementModel 拡張（category, vibrationValue/Min/Avg/Max）
+- ✅ LogsScreen: カテゴリに応じた表示切替（dB or m/s²、閾値・バッジ）
+- ✅ CSVService: 振動測定用の列を追加（dB列と分離、値の混在なし）
+- ✅ ComparisonScreen: 振動測定を除外（改善率計算がdB前提のロジックのため。
+  他カテゴリの比較対応は将来課題）
+- ✅ ユニットテスト12ケース追加（VibrationService/MeasurementModel/CSVService）
+- ✅ **検証済み**: `flutter analyze`（エラー0件）・`flutter test`（45/45合格）
+- ⚠️ 実機での加速度センサー動作確認は未実施（このサンドボックスにはAndroid/iOS
+  実機が無いため）。ロジック自体は`sensors_plus`という実績のあるプラグイン経由の
+  実センサーAPIを使っているため、dB測定のような全面シミュレーションとは異なる
+- 📝 GPS位置情報タグ付け・照度計測は別途対応予定（照度はiOSに環境光センサーへの
+  公開APIが無いため、クロスプラットフォームでの実センサー対応に制約がある）
+
+**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定・振動測定機能実装（検証済み）  
 **Branch**: claude/ios-build-1qfnz9  
-**Next Task**: 開発者環境で `flutter build apk`/`flutter build ios` 実行 + Firebase実認証情報設定
+**Next Task**: 開発者環境で `flutter build apk`/`flutter build ios` 実行 + Firebase実認証情報設定 + 振動測定の実機確認

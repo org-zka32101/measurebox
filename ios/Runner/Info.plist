@@ -69,6 +69,12 @@
 	<!-- Microphone permission for audio measurement -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>マイクを使用して音量を測定します。測定データはあなたのデバイスにのみ保存されます。</string>
+	<!-- Motion sensor permission for vibration measurement (sensors_plus).
+	     Required even though the accelerometer itself isn't gated behind a
+	     runtime prompt on iOS — omitting this key crashes the app the
+	     moment motion data is accessed. -->
+	<key>NSMotionUsageDescription</key>
+	<string>加速度センサーを使用して振動を測定します。測定データはあなたのデバイスにのみ保存されます。</string>
 	<!-- App Tracking Transparency -->
 	<key>NSUserTrackingUsageDescription</key>
 	<string>あなたの測定データを分析して、アプリの改善に役立てます。</string>

@@ -31,13 +31,18 @@ class MeasurementModelAdapter extends TypeAdapter<MeasurementModel> {
       deviceInfo: fields[11] as String,
       peakFrequency: fields[12] as double?,
       dominantFrequencies: (fields[13] as List?)?.cast<double>(),
+      category: fields[14] == null ? 0 : fields[14] as int,
+      vibrationValue: fields[15] as double?,
+      vibrationMin: fields[16] as double?,
+      vibrationAvg: fields[17] as double?,
+      vibrationMax: fields[18] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MeasurementModel obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -65,7 +70,17 @@ class MeasurementModelAdapter extends TypeAdapter<MeasurementModel> {
       ..writeByte(12)
       ..write(obj.peakFrequency)
       ..writeByte(13)
-      ..write(obj.dominantFrequencies);
+      ..write(obj.dominantFrequencies)
+      ..writeByte(14)
+      ..write(obj.category)
+      ..writeByte(15)
+      ..write(obj.vibrationValue)
+      ..writeByte(16)
+      ..write(obj.vibrationMin)
+      ..writeByte(17)
+      ..write(obj.vibrationAvg)
+      ..writeByte(18)
+      ..write(obj.vibrationMax);
   }
 
   @override

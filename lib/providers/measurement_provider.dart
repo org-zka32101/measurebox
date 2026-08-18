@@ -1,5 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../models/measurement_category.dart';
 import '../models/measurement_model.dart';
 import '../models/measurement_type.dart';
 import '../services/firebase_service.dart';
@@ -24,6 +25,11 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
   Future<MeasurementModel> createMeasurement({
     required String userId,
     required String projectId,
+    // dB系フィールドはcategoryがsound以外(vibration等)の場合は意味を
+    // 持たない。モデル自体は既存のdB専用フィールドをnon-nullableのまま
+    // 保っているため（呼び出し側全箇所の変更を避けるため）、その場合は
+    // 呼び出し元(MeasureScreen)から 0.0 を渡す規約とする。表示側は
+    // measurementCategory を見てから dB / 振動どちらの値を出すか判断する。
     required double dbValue,
     required double dbMin,
     required double dbAvg,
@@ -31,10 +37,15 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
     required int durationMs,
     String? memo,
     MeasurementType type = MeasurementType.single,
+    MeasurementCategory category = MeasurementCategory.sound,
     double calibrationOffset = 0.0,
     String deviceInfo = '',
     double? peakFrequency,
     List<double>? dominantFrequencies,
+    double? vibrationValue,
+    double? vibrationMin,
+    double? vibrationAvg,
+    double? vibrationMax,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -53,6 +64,11 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
         deviceInfo: deviceInfo,
         peakFrequency: peakFrequency,
         dominantFrequencies: dominantFrequencies,
+        category: category.index,
+        vibrationValue: vibrationValue,
+        vibrationMin: vibrationMin,
+        vibrationAvg: vibrationAvg,
+        vibrationMax: vibrationMax,
       );
       await _firebaseService.saveMeasurement(userId, projectId, measurement);
       state = const AsyncValue.data(null);
