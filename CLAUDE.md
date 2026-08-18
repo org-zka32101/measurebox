@@ -359,8 +359,13 @@ Before App Store/Google Play:
 - ⚠️ 実機での位置情報取得動作確認は未実施（このサンドボックスには実機が無いため）
 
 ### 照度計測機能 ✅ **コード実装完了・Android専用・実センサー対応** (2026-08-18)
-- ✅ IlluminanceService（`light_sensor`パッケージ、Android実機のTYPE_LIGHT
-  センサーを使用。**Android専用**——iOSは環境光センサーへの公開APIが
+- ✅ IlluminanceService（自前のAndroidネイティブ実装（MainActivity.kt）が
+  MethodChannel/EventChannel経由でTYPE_LIGHTセンサーの実データを公開。
+  当初pub.devの`light_sensor`パッケージを使う想定だったが、CIで
+  `jcenter()`未対応（AGP 9系はjcenter()を廃止）によるビルド失敗が判明し、
+  同種の軽量メンテナンスのプラグインは軒並み古いGradle DSLのままである
+  ため、~40行のSensorManager直叩きを自前実装に切り替えた。
+  **Android専用**——iOSは環境光センサーへの公開APIが
   存在しないため（Appleの制約、サードパーティアプリからアクセス不可）、
   音のdB測定のようなシミュレーション代替もあえて行わず、機能自体を
   Androidのみに限定する判断とした
@@ -374,9 +379,11 @@ Before App Store/Google Play:
 - ✅ LogsScreen/CSVService: カテゴリに応じた表示・列の出し分け
   （3カテゴリ対応に一般化）
 - ✅ ユニットテスト4ケース追加（MeasurementModel/CSVService）
-- ✅ **検証済み**: `flutter analyze`（エラー0件）・`flutter test`（50/50合格）
-- ⚠️ 実機（Android）でのセンサー動作確認は未実施（このサンドボックスには
-  実機が無いため）
+- ✅ **検証済み**: `flutter analyze`（エラー0件）・`flutter test`（50/50合格）。
+  Kotlinコード自体はこの環境にAndroid SDK/Gradleが無くコンパイル確認
+  できないため、括弧バランスの静的チェックのみ実施
+- ⚠️ 実機（Android）でのセンサー・ネイティブコード動作確認は未実施
+  （このサンドボックスには実機もAndroidビルド環境も無いため）
 
 **Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定・振動測定・GPS位置情報・
 照度測定(Android専用)機能実装（検証済み）  

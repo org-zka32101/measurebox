@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
-import 'package:light_sensor/light_sensor.dart';
+import 'package:flutter/services.dart';
 
 /// Real-time illuminance (lux) measurement — **Android only**.
 ///
@@ -11,12 +11,30 @@ import 'package:light_sensor/light_sensor.dart';
 /// only for the OS's own auto-brightness), so no Flutter plugin can offer
 /// real illuminance data there. Rather than fake iOS support with a
 /// simulated value (as AudioService does for dB, clearly documented as
-/// such), this feature is scoped to Android only, where `light_sensor`
-/// reads the device's real `TYPE_LIGHT` sensor. [isAvailable] reports
-/// `false` on every other platform and the UI hides the 照度 tab entirely
-/// there — see MeasureScreen.
+/// such), this feature is scoped to Android only, where the app's own
+/// MainActivity.kt reads the device's real `TYPE_LIGHT` sensor via a
+/// platform channel. [isAvailable] reports `false` on every other
+/// platform and the UI hides the 照度 tab entirely there — see
+/// MeasureScreen.
+///
+/// This talks to a hand-written platform channel (see MainActivity.kt)
+/// instead of a third-party plugin: the maintained light-sensor plugins on
+/// pub.dev (`light`, `light_sensor`) ship native Android Gradle build
+/// files pinned to an old configuration (`jcenter()`, pre-AGP-9 DSL) that
+/// fails outright against this project's AGP 9.0.1 / Gradle 9.1.0
+/// toolchain (confirmed via CI: "Could not find method jcenter()").
+/// Reading `SensorManager.TYPE_LIGHT` is ~40 lines of plain Android code,
+/// so owning it directly avoids depending on an unmaintained plugin's
+/// build.gradle for a single sensor.
 class IlluminanceService {
-  StreamSubscription<int>? _subscription;
+  static const MethodChannel _methodChannel = MethodChannel(
+    'com.yourwish.measuretrackers/illuminance',
+  );
+  static const EventChannel _eventChannel = EventChannel(
+    'com.yourwish.measuretrackers/illuminance/stream',
+  );
+
+  StreamSubscription<dynamic>? _subscription;
   bool _isRecording = false;
 
   int _currentLux = 0;
@@ -31,7 +49,8 @@ class IlluminanceService {
   static Future<bool> isAvailable() async {
     if (!Platform.isAndroid) return false;
     try {
-      return await LightSensor.hasSensor();
+      final hasSensor = await _methodChannel.invokeMethod<bool>('hasSensor');
+      return hasSensor ?? false;
     } catch (_) {
       // MissingPluginException or similar — treat as unavailable rather
       // than letting the error surface to the UI.
@@ -61,10 +80,11 @@ class IlluminanceService {
     _sampleCount = 0;
     _startTime = DateTime.now();
 
-    _subscription = LightSensor.luxStream().listen(
-      (lux) {
+    _subscription = _eventChannel.receiveBroadcastStream().listen(
+      (dynamic event) {
         if (!_isRecording) return;
 
+        final lux = (event as num).round();
         _currentLux = lux;
         if (_sampleCount == 0 || lux < _minLux) _minLux = lux;
         if (lux > _maxLux) _maxLux = lux;
