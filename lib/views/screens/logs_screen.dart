@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';
+import '../../models/measurement_type.dart';
 import '../../providers/measurement_provider.dart';
 import '../../services/csv_service.dart';
 import '../../utils/error_messages.dart';
@@ -384,6 +385,34 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                               context,
                                             ).textTheme.bodySmall,
                                           ),
+                                          if (measurement.measurementType !=
+                                              MeasurementType.single) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: primaryColor.withOpacity(
+                                                  0.1,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                measurement
+                                                    .measurementType
+                                                    .label,
+                                                style: const TextStyle(
+                                                  color: primaryColor,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                       Container(

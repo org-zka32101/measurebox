@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';
+import '../../models/measurement_type.dart';
 import '../../providers/measurement_provider.dart';
 import '../../providers/comparison_provider.dart';
 import '../../utils/error_messages.dart';
@@ -120,16 +121,28 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
     );
   }
 
+  // 測定画面でMeasurementType（単発/対策前/対策後）をタグ付けしていた場合、
+  // ドロップダウンの選択肢でもそれが分かるようにする（単発の場合は表示しない）。
+  String _dropdownLabel(MeasurementModel m) {
+    final base =
+        '${m.dbValue.toStringAsFixed(1)} dB - ${DateFormat('MM-dd HH:mm').format(m.timestamp)}';
+    return m.measurementType == MeasurementType.single
+        ? base
+        : '$base [${m.measurementType.label}]';
+  }
+
   Future<void> _saveComparison() async {
     if (_beforeMeasurement == null || _afterMeasurement == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('対策前と対策後の両方を選択してください')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('対策前と対策後の両方を選択してください')));
       return;
     }
 
     try {
-      await ref.read(comparisonProvider.notifier).createComparison(
+      await ref
+          .read(comparisonProvider.notifier)
+          .createComparison(
             userId: ComparisonScreen.guestUserId,
             projectId: widget.projectId,
             beforeMeasurement: _beforeMeasurement!,
@@ -138,23 +151,25 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('比較を保存しました')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('比較を保存しました')));
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final measurementsAsync = ref.watch(measurementsByProjectProvider(widget.projectId));
+    final measurementsAsync = ref.watch(
+      measurementsByProjectProvider(widget.projectId),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -198,17 +213,16 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                     const SizedBox(height: 8),
                     Text(
                       '対策前後を比較するには、まず測定を記録してください',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: textSecondary,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: textSecondary),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).pushNamed(
-                        '/measure',
-                        arguments: widget.projectId,
-                      ),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed('/measure', arguments: widget.projectId),
                       icon: const Icon(Icons.mic_rounded),
                       label: Text(AppStrings.startMeasure),
                     ),
@@ -220,8 +234,14 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
 
           // Apply date filter
           final filteredMeasurements = measurements.where((m) {
-            if (_filterStartDate != null && m.timestamp.isBefore(_filterStartDate!)) return false;
-            if (_filterEndDate != null && m.timestamp.isAfter(_filterEndDate!.add(const Duration(days: 1)))) return false;
+            if (_filterStartDate != null &&
+                m.timestamp.isBefore(_filterStartDate!))
+              return false;
+            if (_filterEndDate != null &&
+                m.timestamp.isAfter(
+                  _filterEndDate!.add(const Duration(days: 1)),
+                ))
+              return false;
             return true;
           }).toList();
 
@@ -253,7 +273,7 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
 
           final selectionClearedByFilter =
               (hadBeforeSelection && _beforeMeasurement == null) ||
-                  (hadAfterSelection && _afterMeasurement == null);
+              (hadAfterSelection && _afterMeasurement == null);
           if (selectionClearedByFilter) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
@@ -281,15 +301,18 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.lightbulb_outline_rounded,
-                          color: safeColor, size: 20),
+                      const Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: safeColor,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           AppStrings.comparisonHint,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                height: 1.4,
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(height: 1.4),
                         ),
                       ),
                     ],
@@ -317,20 +340,22 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       '${_beforeMeasurement!.dbValue.toStringAsFixed(1)} dB',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.headlineSmall,
                                     ),
                                     Text(
-                                      DateFormat('yyyy-MM-dd HH:mm')
-                                          .format(_beforeMeasurement!.timestamp),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
+                                      DateFormat(
+                                        'yyyy-MM-dd HH:mm',
+                                      ).format(_beforeMeasurement!.timestamp),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 ),
@@ -358,13 +383,15 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                         items: filteredMeasurements
                             .where((m) => m.id != _selectedAfterId)
                             .map((m) {
-                          return DropdownMenuItem<String>(
-                            value: m.id,
-                            child: Text(
-                              '${m.dbValue.toStringAsFixed(1)} dB - ${DateFormat('MM-dd HH:mm').format(m.timestamp)}',
-                            ),
-                          );
-                        }).toList(),
+                              return DropdownMenuItem<String>(
+                                value: m.id,
+                                child: Text(
+                                  _dropdownLabel(m),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            })
+                            .toList(),
                         onChanged: (value) {
                           setState(() => _selectedBeforeId = value);
                         },
@@ -394,20 +421,22 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       '${_afterMeasurement!.dbValue.toStringAsFixed(1)} dB',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.headlineSmall,
                                     ),
                                     Text(
-                                      DateFormat('yyyy-MM-dd HH:mm')
-                                          .format(_afterMeasurement!.timestamp),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
+                                      DateFormat(
+                                        'yyyy-MM-dd HH:mm',
+                                      ).format(_afterMeasurement!.timestamp),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 ),
@@ -434,13 +463,15 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                         items: filteredMeasurements
                             .where((m) => m.id != _selectedBeforeId)
                             .map((m) {
-                          return DropdownMenuItem<String>(
-                            value: m.id,
-                            child: Text(
-                              '${m.dbValue.toStringAsFixed(1)} dB - ${DateFormat('MM-dd HH:mm').format(m.timestamp)}',
-                            ),
-                          );
-                        }).toList(),
+                              return DropdownMenuItem<String>(
+                                value: m.id,
+                                child: Text(
+                                  _dropdownLabel(m),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            })
+                            .toList(),
                         onChanged: (value) {
                           setState(() => _selectedAfterId = value);
                         },
@@ -456,7 +487,8 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Card(
-                      color: (_afterMeasurement!.dbValue <
+                      color:
+                          (_afterMeasurement!.dbValue <
                               _beforeMeasurement!.dbValue)
                           ? safeColor.withOpacity(0.1)
                           : dangerColor.withOpacity(0.1),
@@ -473,11 +505,12 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                               '${(_beforeMeasurement!.dbValue - _afterMeasurement!.dbValue).toStringAsFixed(1)} dB',
                               style: Theme.of(context).textTheme.headlineSmall
                                   ?.copyWith(
-                                color: _afterMeasurement!.dbValue <
-                                        _beforeMeasurement!.dbValue
-                                    ? safeColor
-                                    : dangerColor,
-                              ),
+                                    color:
+                                        _afterMeasurement!.dbValue <
+                                            _beforeMeasurement!.dbValue
+                                        ? safeColor
+                                        : dangerColor,
+                                  ),
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -548,13 +581,11 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
             ),
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => ErrorStateView(
           error: error,
-          onRetry: () => ref
-              .invalidate(measurementsByProjectProvider(widget.projectId)),
+          onRetry: () =>
+              ref.invalidate(measurementsByProjectProvider(widget.projectId)),
         ),
       ),
     );
