@@ -83,6 +83,21 @@ class MeasurementModel {
   @HiveField(20)
   double? longitude;
 
+  /// Illuminance (lux) — Android only, see IlluminanceService. Null for
+  /// non-illuminance measurements. luxValue/Min/Max are int (matching
+  /// light_sensor's Stream<int>); luxAvg is double since it's a mean.
+  @HiveField(21)
+  int? luxValue;
+
+  @HiveField(22)
+  int? luxMin;
+
+  @HiveField(23)
+  double? luxAvg;
+
+  @HiveField(24)
+  int? luxMax;
+
   MeasurementModel({
     required this.id,
     required this.projectId,
@@ -105,6 +120,10 @@ class MeasurementModel {
     this.vibrationMax,
     this.latitude,
     this.longitude,
+    this.luxValue,
+    this.luxMin,
+    this.luxAvg,
+    this.luxMax,
   });
 
   MeasurementType get measurementType =>
@@ -142,6 +161,10 @@ class MeasurementModel {
     double? vibrationMax,
     double? latitude,
     double? longitude,
+    int? luxValue,
+    int? luxMin,
+    double? luxAvg,
+    int? luxMax,
   }) {
     return MeasurementModel(
       id: id ?? this.id,
@@ -165,6 +188,10 @@ class MeasurementModel {
       vibrationMax: vibrationMax ?? this.vibrationMax,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      luxValue: luxValue ?? this.luxValue,
+      luxMin: luxMin ?? this.luxMin,
+      luxAvg: luxAvg ?? this.luxAvg,
+      luxMax: luxMax ?? this.luxMax,
     );
   }
 
@@ -190,6 +217,10 @@ class MeasurementModel {
       'vibration_max': vibrationMax,
       'latitude': latitude,
       'longitude': longitude,
+      'lux_value': luxValue,
+      'lux_min': luxMin,
+      'lux_avg': luxAvg,
+      'lux_max': luxMax,
     };
   }
 
@@ -233,6 +264,10 @@ class MeasurementModel {
       vibrationMax: (data['vibration_max'] as num?)?.toDouble(),
       latitude: (data['latitude'] as num?)?.toDouble(),
       longitude: (data['longitude'] as num?)?.toDouble(),
+      luxValue: (data['lux_value'] as num?)?.toInt(),
+      luxMin: (data['lux_min'] as num?)?.toInt(),
+      luxAvg: (data['lux_avg'] as num?)?.toDouble(),
+      luxMax: (data['lux_max'] as num?)?.toInt(),
     );
   }
 }

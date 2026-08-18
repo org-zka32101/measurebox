@@ -357,8 +357,29 @@ Before App Store/Google Play:
 - ✅ ユニットテスト3ケース追加（MeasurementModel/CSVService）
 - ✅ **検証済み**: `flutter analyze`（エラー0件）・`flutter test`（48/48合格）
 - ⚠️ 実機での位置情報取得動作確認は未実施（このサンドボックスには実機が無いため）
-- 📝 照度計測は引き続き別途対応予定
 
-**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定・振動測定・GPS位置情報機能実装（検証済み）  
+### 照度計測機能 ✅ **コード実装完了・Android専用・実センサー対応** (2026-08-18)
+- ✅ IlluminanceService（`light_sensor`パッケージ、Android実機のTYPE_LIGHT
+  センサーを使用。**Android専用**——iOSは環境光センサーへの公開APIが
+  存在しないため（Appleの制約、サードパーティアプリからアクセス不可）、
+  音のdB測定のようなシミュレーション代替もあえて行わず、機能自体を
+  Androidのみに限定する判断とした
+- ✅ MeasureScreen: `Platform.isAndroid` の場合のみ4番目のタブ「照度」を
+  表示（iOSではタブ自体が存在しない）。該当端末に照度センサーが無い
+  場合も判定してメッセージ表示
+- ✅ MeasurementCategory に illuminance を追加（sound/vibration/illuminance）
+- ✅ MeasurementModel 拡張（luxValue/Min/Avg/Max）
+- ✅ 照度は「多いほど悪い」という前提が成立しない指標のため、dB/振動と
+  異なり安全/注意/危険の判定バッジは付けず、実測値をそのまま提示
+- ✅ LogsScreen/CSVService: カテゴリに応じた表示・列の出し分け
+  （3カテゴリ対応に一般化）
+- ✅ ユニットテスト4ケース追加（MeasurementModel/CSVService）
+- ✅ **検証済み**: `flutter analyze`（エラー0件）・`flutter test`（50/50合格）
+- ⚠️ 実機（Android）でのセンサー動作確認は未実施（このサンドボックスには
+  実機が無いため）
+
+**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定・振動測定・GPS位置情報・
+照度測定(Android専用)機能実装（検証済み）  
 **Branch**: claude/ios-build-1qfnz9  
-**Next Task**: 開発者環境で `flutter build apk`/`flutter build ios` 実行 + Firebase実認証情報設定 + 振動測定の実機確認
+**Next Task**: 開発者環境で `flutter build apk`/`flutter build ios` 実行 + Firebase実認証情報設定 +
+振動測定・照度測定の実機確認

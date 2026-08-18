@@ -48,6 +48,10 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
     double? vibrationMax,
     double? latitude,
     double? longitude,
+    int? luxValue,
+    int? luxMin,
+    double? luxAvg,
+    int? luxMax,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -73,6 +77,10 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
         vibrationMax: vibrationMax,
         latitude: latitude,
         longitude: longitude,
+        luxValue: luxValue,
+        luxMin: luxMin,
+        luxAvg: luxAvg,
+        luxMax: luxMax,
       );
       await _firebaseService.saveMeasurement(userId, projectId, measurement);
       state = const AsyncValue.data(null);

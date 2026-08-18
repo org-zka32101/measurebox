@@ -181,5 +181,38 @@ void main() {
       expect(rows[1], contains('35.681236'));
       expect(rows[1], contains('139.767125'));
     });
+
+    test('generateCSV keeps illuminance values in their own columns', () async {
+      final measurements = [
+        MeasurementModel(
+          id: '1',
+          projectId: 'proj1',
+          type: 0,
+          dbValue: 0.0,
+          dbMin: 0.0,
+          dbAvg: 0.0,
+          dbMax: 0.0,
+          durationMs: 3000,
+          timestamp: DateTime(2026, 6, 14, 11, 0),
+          category: MeasurementCategory.illuminance.index,
+          luxValue: 320,
+          luxMin: 280,
+          luxAvg: 305.5,
+          luxMax: 340,
+        ),
+      ];
+
+      final csv = await csvService.generateCSV(
+        measurements: measurements,
+        projectName: 'TestProject',
+      );
+
+      final rows = csv.split('\n');
+      expect(rows[0], contains('照度値'));
+      expect(rows[1], contains('照度'));
+      expect(rows[1], contains('320'));
+      // dB placeholder (0.0) is not written as a misleading real reading
+      expect(rows[1], isNot(contains('0.0,0.0,0.0,0.0')));
+    });
   });
 }
