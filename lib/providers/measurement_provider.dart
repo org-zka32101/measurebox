@@ -1,23 +1,23 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/measurement_model.dart';
+import '../models/measurement_type.dart';
 import '../services/firebase_service.dart';
 
 final measurementServiceProvider = Provider((ref) => FirebaseService());
 
 final measurementsByProjectProvider =
     StreamProvider.family<List<MeasurementModel>, String>((ref, projectId) {
-  final firebaseService = ref.watch(measurementServiceProvider);
+      final firebaseService = ref.watch(measurementServiceProvider);
 
-  // ゲストモード：'guest-user' で直接アクセス
-  const guestUserId = 'guest-user';
-  return firebaseService.streamMeasurements(guestUserId, projectId);
-});
+      // ゲストモード：'guest-user' で直接アクセス
+      const guestUserId = 'guest-user';
+      return firebaseService.streamMeasurements(guestUserId, projectId);
+    });
 
 class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
-  MeasurementNotifier(
-    this._firebaseService,
-  ) : super(const AsyncValue.data(null));
+  MeasurementNotifier(this._firebaseService)
+    : super(const AsyncValue.data(null));
 
   final FirebaseService _firebaseService;
 
@@ -30,6 +30,7 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
     required double dbMax,
     required int durationMs,
     String? memo,
+    MeasurementType type = MeasurementType.single,
     double calibrationOffset = 0.0,
     String deviceInfo = '',
     double? peakFrequency,
@@ -40,7 +41,7 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
       final measurement = MeasurementModel(
         id: const Uuid().v4(),
         projectId: projectId,
-        type: 0,
+        type: type.index,
         dbValue: dbValue + calibrationOffset,
         dbMin: dbMin + calibrationOffset,
         dbAvg: dbAvg + calibrationOffset,
@@ -69,14 +70,16 @@ class MeasurementNotifier extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await _firebaseService.deleteMeasurement(userId, projectId, measurementId);
+      await _firebaseService.deleteMeasurement(
+        userId,
+        projectId,
+        measurementId,
+      );
     });
   }
 }
 
 final measurementProvider =
     StateNotifierProvider<MeasurementNotifier, AsyncValue<void>>(
-  (ref) => MeasurementNotifier(
-    ref.watch(measurementServiceProvider),
-  ),
-);
+      (ref) => MeasurementNotifier(ref.watch(measurementServiceProvider)),
+    );

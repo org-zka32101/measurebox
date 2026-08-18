@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';
+import '../../models/measurement_type.dart';
 import '../../services/audio_service.dart';
 import '../../services/frequency_analysis_service.dart';
 import '../../providers/measurement_provider.dart';
@@ -17,10 +18,7 @@ class MeasureScreen extends ConsumerStatefulWidget {
 
   final String projectId;
 
-  const MeasureScreen({
-    super.key,
-    required this.projectId,
-  });
+  const MeasureScreen({super.key, required this.projectId});
 
   @override
   ConsumerState<MeasureScreen> createState() => _MeasureScreenState();
@@ -37,6 +35,12 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   double _maxDb = 0.0;
   FrequencySpectrum? _currentSpectrum;
   MeasurementModel? _lastMeasurement;
+
+  // 対策前後比較の対象として記録するかどうかのタグ付け。既存の
+  // MeasurementType (単発/対策前/対策後) はモデル・Firestore保存では
+  // 元々対応済みだったが、実際に値を設定する画面側の導線が無く、
+  // 常に単発固定で保存されていた。ここで選択→保存まで繋ぐ。
+  MeasurementType _selectedType = MeasurementType.single;
 
   late TextEditingController _memoController;
 
@@ -70,7 +74,8 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             action: SnackBarAction(
               label: '許可',
               onPressed: () async {
-                final granted = await _audioService.requestMicrophonePermission();
+                final granted = await _audioService
+                    .requestMicrophonePermission();
                 if (granted && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('マイク権限が許可されました')),
@@ -111,9 +116,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
       setState(() => _isMeasuring = true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
       }
     }
   }
@@ -123,9 +128,13 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
       await _audioService.stopMeasurement();
       await _audioService.stopFrequencyMeasurement();
 
-      final durationMs = DateTime.now().difference(_audioService.getStartTime() ?? DateTime.now()).inMilliseconds;
+      final durationMs = DateTime.now()
+          .difference(_audioService.getStartTime() ?? DateTime.now())
+          .inMilliseconds;
 
-      final hasFrequencyData = _audioService.getPeakFrequencyHistory().isNotEmpty;
+      final hasFrequencyData = _audioService
+          .getPeakFrequencyHistory()
+          .isNotEmpty;
 
       _lastMeasurement = MeasurementModel(
         id: '',
@@ -147,9 +156,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
       setState(() => _isMeasuring = false);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
       }
     }
   }
@@ -161,7 +170,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
       // Settings画面で設定したマイク校正オフセットを反映する
       // (createMeasurement内でdbValue/min/avg/maxに加算される)。
       final calibrationOffset = ref.read(calibrationProvider);
-      await ref.read(measurementProvider.notifier).createMeasurement(
+      await ref
+          .read(measurementProvider.notifier)
+          .createMeasurement(
             userId: MeasureScreen.guestUserId,
             projectId: widget.projectId,
             dbValue: _lastMeasurement!.dbValue,
@@ -170,22 +181,23 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             dbMax: _lastMeasurement!.dbMax,
             durationMs: _lastMeasurement!.durationMs,
             memo: _memoController.text.isEmpty ? null : _memoController.text,
+            type: _selectedType,
             calibrationOffset: calibrationOffset,
             peakFrequency: _lastMeasurement!.peakFrequency,
             dominantFrequencies: _lastMeasurement!.dominantFrequencies,
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('測定を保存しました')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('測定を保存しました')));
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
       }
     }
   }
@@ -235,16 +247,19 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded,
-                      color: primaryColor, size: 20),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: primaryColor,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       AppStrings.measureHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: primaryDark,
-                            height: 1.4,
-                          ),
+                        color: primaryDark,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -254,10 +269,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildVolumeTab(context),
-                _buildFrequencyTab(context),
-              ],
+              children: [_buildVolumeTab(context), _buildFrequencyTab(context)],
             ),
           ),
 
@@ -287,6 +299,37 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                       ),
                       if (_lastMeasurement != null) ...[
                         const SizedBox(height: 16),
+                        // 対策前後比較用のタグ付け（任意・既定は単発）
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '測定の種類',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: textSecondary),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SegmentedButton<MeasurementType>(
+                          segments: const [
+                            ButtonSegment(
+                              value: MeasurementType.single,
+                              label: Text('単発'),
+                            ),
+                            ButtonSegment(
+                              value: MeasurementType.before,
+                              label: Text('対策前'),
+                            ),
+                            ButtonSegment(
+                              value: MeasurementType.after,
+                              label: Text('対策後'),
+                            ),
+                          ],
+                          selected: {_selectedType},
+                          onSelectionChanged: (selection) {
+                            setState(() => _selectedType = selection.first);
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         // Memo input
                         TextField(
                           controller: _memoController,
@@ -310,6 +353,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                                   _avgDb = 0;
                                   _currentSpectrum = null;
                                   _memoController.clear();
+                                  _selectedType = MeasurementType.single;
                                   setState(() {});
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -344,43 +388,48 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             const SizedBox(height: 16),
 
             // Gauge
-            DecibelGauge(
-              value: _currentDb,
-              isAnimating: _isMeasuring,
-            ),
+            DecibelGauge(value: _currentDb, isAnimating: _isMeasuring),
 
             // 現在のステータスバッジ（測定中、および測定停止後の確認中も
             // 表示し続ける。停止直後に安全/注意/危険の文脈が消えると、
             // ユーザーは保存前にdBの数値だけを見て判断することになる）
             if (_isMeasuring || _lastMeasurement != null) ...[
-              Builder(builder: (context) {
-                final displayDb = _lastMeasurement?.dbValue ?? _currentDb;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _statusColor(displayDb).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.circle, size: 10, color: _statusColor(displayDb)),
-                        const SizedBox(width: 8),
-                        Text(
-                          _statusLabel(displayDb),
-                          style: TextStyle(
+              Builder(
+                builder: (context) {
+                  final displayDb = _lastMeasurement?.dbValue ?? _currentDb;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _statusColor(displayDb).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 10,
                             color: _statusColor(displayDb),
-                            fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            _statusLabel(displayDb),
+                            style: TextStyle(
+                              color: _statusColor(displayDb),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ],
 
             const SizedBox(height: 24),
@@ -396,9 +445,18 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStatColumn('最小', '${_minDb.toStringAsFixed(1)} dB'),
-                          _buildStatColumn('平均', '${_avgDb.toStringAsFixed(1)} dB'),
-                          _buildStatColumn('最大', '${_maxDb.toStringAsFixed(1)} dB'),
+                          _buildStatColumn(
+                            '最小',
+                            '${_minDb.toStringAsFixed(1)} dB',
+                          ),
+                          _buildStatColumn(
+                            '平均',
+                            '${_avgDb.toStringAsFixed(1)} dB',
+                          ),
+                          _buildStatColumn(
+                            '最大',
+                            '${_maxDb.toStringAsFixed(1)} dB',
+                          ),
                         ],
                       ),
                     ],
@@ -492,10 +550,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 14, height: 1.4),
-          ),
+          child: Text(text, style: const TextStyle(fontSize: 14, height: 1.4)),
         ),
       ],
     );
@@ -506,16 +561,16 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: textSecondary),
         ),
         const SizedBox(height: 8),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
