@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
+import '../../models/measurement_category.dart';
 import '../../models/measurement_model.dart';
 import '../../models/measurement_type.dart';
 import '../../providers/measurement_provider.dart';
@@ -183,7 +184,15 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
         ],
       ),
       body: measurementsAsync.when(
-        data: (measurements) {
+        data: (allMeasurements) {
+          // 改善率の計算 (comparison_provider.dart) はdB値前提のロジックの
+          // ため、振動測定など他カテゴリが混ざると意味のない比較になって
+          // しまう。騒音測定のみに絞り込む。他カテゴリの比較対応は将来の
+          // 拡張課題とする。
+          final measurements = allMeasurements
+              .where((m) => m.measurementCategory == MeasurementCategory.sound)
+              .toList();
+
           if (measurements.isEmpty) {
             return Center(
               child: Padding(

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
+import '../../models/measurement_category.dart';
 import '../../models/measurement_model.dart';
 import '../../models/measurement_type.dart';
 import '../../providers/measurement_provider.dart';
@@ -36,6 +37,19 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
   String _getStatusLabel(double dbValue) {
     if (dbValue < 70) return AppStrings.safe;
     if (dbValue < 85) return AppStrings.warning;
+    return AppStrings.danger;
+  }
+
+  // measure_screen.dartと同じ目安の閾値（校正された安全基準ではない）。
+  Color _getVibrationStatusColor(double magnitude) {
+    if (magnitude < 2.0) return safeColor;
+    if (magnitude < 5.0) return warningColor;
+    return dangerColor;
+  }
+
+  String _getVibrationStatusLabel(double magnitude) {
+    if (magnitude < 2.0) return AppStrings.safe;
+    if (magnitude < 5.0) return AppStrings.warning;
     return AppStrings.danger;
   }
 
@@ -284,13 +298,24 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                 filteredMeasurements,
               )..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
+              // TimeSeriesChartはdbValueを軸にプロットする作りなので、振動
+              // 測定（dbValueは常に0のプレースホルダ）を混ぜると、あたかも
+              // 0dBの瞬間があったかのような誤解を招くグラフになってしまう。
+              // 騒音測定のみに絞り込む。
+              final soundMeasurementsForChart = filteredMeasurements
+                  .where(
+                    (m) => m.measurementCategory == MeasurementCategory.sound,
+                  )
+                  .toList();
+
               return SingleChildScrollView(
                 child: Column(
                   children: [
-                    TimeSeriesChart(
-                      measurements: filteredMeasurements,
-                      title: '測定値の推移',
-                    ),
+                    if (soundMeasurementsForChart.isNotEmpty)
+                      TimeSeriesChart(
+                        measurements: soundMeasurementsForChart,
+                        title: '測定値の推移',
+                      ),
                     const SizedBox(height: 16),
                     // スワイプ削除はジェスチャーだけでは気づかれにくいため、
                     // 一覧の上に一言添えておく
@@ -319,12 +344,31 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                       itemCount: sortedMeasurements.length,
                       itemBuilder: (context, index) {
                         final measurement = sortedMeasurements[index];
-                        final statusColor = _getStatusColor(
-                          measurement.dbValue,
-                        );
-                        final statusLabel = _getStatusLabel(
-                          measurement.dbValue,
-                        );
+                        final isVibration =
+                            measurement.measurementCategory ==
+                            MeasurementCategory.vibration;
+                        // 騒音(dB)と振動(m/s²)は単位も安全閾値も異なるため、
+                        // categoryに応じて表示する値・色・ラベルを出し分ける。
+                        final displayValue = isVibration
+                            ? (measurement.vibrationValue ?? 0.0)
+                            : measurement.dbValue;
+                        final minValue = isVibration
+                            ? (measurement.vibrationMin ?? 0.0)
+                            : measurement.dbMin;
+                        final avgValue = isVibration
+                            ? (measurement.vibrationAvg ?? 0.0)
+                            : measurement.dbAvg;
+                        final maxValue = isVibration
+                            ? (measurement.vibrationMax ?? 0.0)
+                            : measurement.dbMax;
+                        final unit = isVibration ? 'm/s²' : 'dB';
+                        final decimals = isVibration ? 2 : 1;
+                        final statusColor = isVibration
+                            ? _getVibrationStatusColor(displayValue)
+                            : _getStatusColor(displayValue);
+                        final statusLabel = isVibration
+                            ? _getVibrationStatusLabel(displayValue)
+                            : _getStatusLabel(displayValue);
                         final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
 
                         return Dismissible(
@@ -370,7 +414,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            '${measurement.dbValue.toStringAsFixed(1)} dB',
+                                            '${displayValue.toStringAsFixed(decimals)} $unit',
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .headlineSmall
@@ -385,32 +429,28 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                               context,
                                             ).textTheme.bodySmall,
                                           ),
-                                          if (measurement.measurementType !=
-                                              MeasurementType.single) ...[
+                                          if (isVibration ||
+                                              measurement.measurementType !=
+                                                  MeasurementType.single) ...[
                                             const SizedBox(height: 4),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 2,
+                                            Wrap(
+                                              spacing: 6,
+                                              children: [
+                                                if (isVibration)
+                                                  _categoryBadge(
+                                                    measurement
+                                                        .measurementCategory
+                                                        .label,
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: primaryColor.withOpacity(
-                                                  0.1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                measurement
-                                                    .measurementType
-                                                    .label,
-                                                style: const TextStyle(
-                                                  color: primaryColor,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
+                                                if (measurement
+                                                        .measurementType !=
+                                                    MeasurementType.single)
+                                                  _categoryBadge(
+                                                    measurement
+                                                        .measurementType
+                                                        .label,
+                                                  ),
+                                              ],
                                             ),
                                           ],
                                         ],
@@ -448,7 +488,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                       _buildStatItem(
                                         context,
                                         '最小',
-                                        measurement.dbMin.toStringAsFixed(1),
+                                        minValue.toStringAsFixed(decimals),
                                       ),
                                       Container(
                                         width: 1,
@@ -458,7 +498,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                       _buildStatItem(
                                         context,
                                         '平均',
-                                        measurement.dbAvg.toStringAsFixed(1),
+                                        avgValue.toStringAsFixed(decimals),
                                       ),
                                       Container(
                                         width: 1,
@@ -468,7 +508,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                       _buildStatItem(
                                         context,
                                         '最大',
-                                        measurement.dbMax.toStringAsFixed(1),
+                                        maxValue.toStringAsFixed(decimals),
                                       ),
                                     ],
                                   ),
@@ -513,6 +553,24 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _categoryBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 11,
+        ),
+      ),
     );
   }
 

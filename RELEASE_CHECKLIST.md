@@ -16,6 +16,7 @@
 - [x] scripts/build_ios.sh 作成
 - [x] Info.plist にマイク権限追加
 - [x] Info.plist に追跡権限追加
+- [x] Info.plist に加速度センサー(振動測定)権限追加
 - [ ] Firebase GoogleService-Info.plist ダウンロード
 - [ ] Xcode 15.0+ インストール確認
 - [ ] CocoaPods インストール確認

@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'measurement_category.dart';
 import 'measurement_type.dart';
 
 part 'measurement_model.g.dart';
@@ -52,6 +53,27 @@ class MeasurementModel {
   @HiveField(13)
   List<double>? dominantFrequencies;
 
+  /// What was measured (sound vs. vibration). See [MeasurementCategory] for
+  /// why this defaults to `0` (sound) for records written before this field
+  /// existed.
+  @HiveField(14)
+  int category;
+
+  /// Vibration magnitude (m/s², gravity already excluded — see
+  /// VibrationService), mirroring dbValue/dbMin/dbAvg/dbMax's shape.
+  /// Null for non-vibration measurements.
+  @HiveField(15)
+  double? vibrationValue;
+
+  @HiveField(16)
+  double? vibrationMin;
+
+  @HiveField(17)
+  double? vibrationAvg;
+
+  @HiveField(18)
+  double? vibrationMax;
+
   MeasurementModel({
     required this.id,
     required this.projectId,
@@ -67,11 +89,23 @@ class MeasurementModel {
     this.deviceInfo = '',
     this.peakFrequency,
     this.dominantFrequencies,
+    this.category = 0,
+    this.vibrationValue,
+    this.vibrationMin,
+    this.vibrationAvg,
+    this.vibrationMax,
   });
 
   MeasurementType get measurementType =>
-      MeasurementType.values[
-          type.clamp(0, MeasurementType.values.length - 1).toInt()];
+      MeasurementType.values[type
+          .clamp(0, MeasurementType.values.length - 1)
+          .toInt()];
+
+  MeasurementCategory get measurementCategory =>
+      MeasurementCategory.values[category.clamp(
+        0,
+        MeasurementCategory.values.length - 1,
+      )];
 
   MeasurementModel copyWith({
     String? id,
@@ -88,6 +122,11 @@ class MeasurementModel {
     String? deviceInfo,
     double? peakFrequency,
     List<double>? dominantFrequencies,
+    int? category,
+    double? vibrationValue,
+    double? vibrationMin,
+    double? vibrationAvg,
+    double? vibrationMax,
   }) {
     return MeasurementModel(
       id: id ?? this.id,
@@ -104,6 +143,11 @@ class MeasurementModel {
       deviceInfo: deviceInfo ?? this.deviceInfo,
       peakFrequency: peakFrequency ?? this.peakFrequency,
       dominantFrequencies: dominantFrequencies ?? this.dominantFrequencies,
+      category: category ?? this.category,
+      vibrationValue: vibrationValue ?? this.vibrationValue,
+      vibrationMin: vibrationMin ?? this.vibrationMin,
+      vibrationAvg: vibrationAvg ?? this.vibrationAvg,
+      vibrationMax: vibrationMax ?? this.vibrationMax,
     );
   }
 
@@ -111,6 +155,7 @@ class MeasurementModel {
     return {
       'id': id,
       'type': measurementType.name,
+      'category': measurementCategory.name,
       'dB_value': dbValue,
       'dB_min': dbMin,
       'dB_avg': dbAvg,
@@ -122,6 +167,10 @@ class MeasurementModel {
       'device_info': deviceInfo,
       'peak_frequency': peakFrequency,
       'dominant_frequencies': dominantFrequencies,
+      'vibration_value': vibrationValue,
+      'vibration_min': vibrationMin,
+      'vibration_avg': vibrationAvg,
+      'vibration_max': vibrationMax,
     };
   }
 
@@ -131,6 +180,12 @@ class MeasurementModel {
   ) {
     final typeStr = data['type'] as String? ?? 'single';
     final type = MeasurementType.values.asNameMap()[typeStr]?.index ?? 0;
+
+    // 'category' キーが無いドキュメントは、この機能が追加される前の
+    // 既存の騒音測定データなので 'sound' として扱う。
+    final categoryStr = data['category'] as String? ?? 'sound';
+    final category =
+        MeasurementCategory.values.asNameMap()[categoryStr]?.index ?? 0;
 
     return MeasurementModel(
       id: data['id'] ?? '',
@@ -145,12 +200,18 @@ class MeasurementModel {
           ? data['timestamp'] as DateTime
           : (data['timestamp'] as dynamic)?.toDate() ?? DateTime.now(),
       memo: data['memo'],
-      calibrationOffset: (data['calibration_offset'] as num?)?.toDouble() ?? 0.0,
+      calibrationOffset:
+          (data['calibration_offset'] as num?)?.toDouble() ?? 0.0,
       deviceInfo: data['device_info'] ?? '',
       peakFrequency: (data['peak_frequency'] as num?)?.toDouble(),
       dominantFrequencies: (data['dominant_frequencies'] as List<dynamic>?)
           ?.map((e) => (e as num).toDouble())
           .toList(),
+      category: category,
+      vibrationValue: (data['vibration_value'] as num?)?.toDouble(),
+      vibrationMin: (data['vibration_min'] as num?)?.toDouble(),
+      vibrationAvg: (data['vibration_avg'] as num?)?.toDouble(),
+      vibrationMax: (data['vibration_max'] as num?)?.toDouble(),
     );
   }
 }

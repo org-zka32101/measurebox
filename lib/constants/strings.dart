@@ -47,6 +47,7 @@ class AppStrings {
   // Frequency measurement
   static const String volumeTab = '音量 (dB)';
   static const String frequencyTab = '周波数';
+  static const String vibrationTab = '振動';
   static const String peakFrequency = 'ピーク周波数';
   static const String avgFrequency = '平均周波数';
   static const String dominantFrequencies = '主要周波数';

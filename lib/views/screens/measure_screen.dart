@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
+import '../../models/measurement_category.dart';
 import '../../models/measurement_model.dart';
 import '../../models/measurement_type.dart';
 import '../../services/audio_service.dart';
 import '../../services/frequency_analysis_service.dart';
+import '../../services/vibration_service.dart';
 import '../../providers/measurement_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/error_messages.dart';
@@ -27,6 +29,7 @@ class MeasureScreen extends ConsumerStatefulWidget {
 class _MeasureScreenState extends ConsumerState<MeasureScreen>
     with SingleTickerProviderStateMixin {
   late AudioService _audioService;
+  late VibrationService _vibrationService;
   late TabController _tabController;
   bool _isMeasuring = false;
   double _currentDb = 0.0;
@@ -34,7 +37,21 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   double _avgDb = 0.0;
   double _maxDb = 0.0;
   FrequencySpectrum? _currentSpectrum;
+
+  // 振動タブ（音量/周波数とは独立した測定モード。加速度センサーから
+  // 実データを取得する — VibrationServiceのドキュメント参照）
+  double _currentVibration = 0.0;
+  double _minVibration = 0.0;
+  double _avgVibration = 0.0;
+  double _maxVibration = 0.0;
+
   MeasurementModel? _lastMeasurement;
+
+  // TabController.index==2 (振動タブ) かどうか。音量/周波数タブは
+  // AudioServiceによる1回の録音セッションから両方のデータを同時取得する
+  // 既存の挙動を維持しつつ、振動は完全に別の測定モードとして扱う
+  // （1件の測定は必ずどちらか一方のcategoryになるため）。
+  bool get _isVibrationTab => _tabController.index == 2;
 
   // 対策前後比較の対象として記録するかどうかのタグ付け。既存の
   // MeasurementType (単発/対策前/対策後) はモデル・Firestore保存では
@@ -48,7 +65,8 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   void initState() {
     super.initState();
     _audioService = AudioService();
-    _tabController = TabController(length: 2, vsync: this);
+    _vibrationService = VibrationService();
+    _tabController = TabController(length: 3, vsync: this);
     _memoController = TextEditingController();
     _checkMicrophonePermission();
   }
@@ -58,6 +76,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     if (_isMeasuring) {
       _audioService.stopMeasurement();
       _audioService.stopFrequencyMeasurement();
+      _vibrationService.stopMeasurement();
     }
     _tabController.dispose();
     _memoController.dispose();
@@ -90,6 +109,42 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   }
 
   void _startMeasuring() async {
+    if (_isVibrationTab) {
+      // 加速度センサーはマイクと違いOSの実行時権限が不要（VibrationService
+      // のドキュメント参照）なので権限チェックは行わない。
+      try {
+        await _vibrationService.startMeasurement(
+          onMagnitudeChange: (current, min, max, avg) {
+            setState(() {
+              _currentVibration = current;
+              _minVibration = min;
+              _maxVibration = max;
+              _avgVibration = avg;
+            });
+          },
+          onError: (error) {
+            // 加速度センサーが無い端末（一部の低スペック/古いAndroid機種等）
+            // では計測が無音でハングするのを避け、ユーザーに知らせて
+            // 測定中状態を解除する。
+            if (mounted) {
+              setState(() => _isMeasuring = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(friendlyErrorMessage(error))),
+              );
+            }
+          },
+        );
+        setState(() => _isMeasuring = true);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        }
+      }
+      return;
+    }
+
     final hasPermission = await _audioService.hasMicrophonePermission();
     if (!hasPermission) {
       final granted = await _audioService.requestMicrophonePermission();
@@ -124,6 +179,45 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   }
 
   Future<void> _stopMeasuring() async {
+    if (_isVibrationTab) {
+      try {
+        final durationMs = DateTime.now()
+            .difference(_vibrationService.startTime ?? DateTime.now())
+            .inMilliseconds;
+
+        await _vibrationService.stopMeasurement();
+
+        _lastMeasurement = MeasurementModel(
+          id: '',
+          projectId: widget.projectId,
+          type: 0,
+          category: MeasurementCategory.vibration.index,
+          // dB系フィールドはこのカテゴリでは使わないプレースホルダ
+          // （measurement_provider.dart参照）。
+          dbValue: 0.0,
+          dbMin: 0.0,
+          dbAvg: 0.0,
+          dbMax: 0.0,
+          durationMs: durationMs,
+          timestamp: DateTime.now(),
+          memo: null,
+          vibrationValue: _currentVibration,
+          vibrationMin: _minVibration,
+          vibrationAvg: _avgVibration,
+          vibrationMax: _maxVibration,
+        );
+
+        setState(() => _isMeasuring = false);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        }
+      }
+      return;
+    }
+
     try {
       await _audioService.stopMeasurement();
       await _audioService.stopFrequencyMeasurement();
@@ -140,6 +234,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
         id: '',
         projectId: widget.projectId,
         type: 0,
+        category: MeasurementCategory.sound.index,
         dbValue: _currentDb,
         dbMin: _minDb,
         dbAvg: _avgDb,
@@ -166,15 +261,22 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   Future<void> _saveMeasurement() async {
     if (_lastMeasurement == null) return;
 
+    final isVibration =
+        _lastMeasurement!.measurementCategory == MeasurementCategory.vibration;
+
     try {
-      // Settings画面で設定したマイク校正オフセットを反映する
-      // (createMeasurement内でdbValue/min/avg/maxに加算される)。
-      final calibrationOffset = ref.read(calibrationProvider);
+      // Settings画面で設定したマイク校正オフセットはdB測定にのみ意味を持つ
+      // (createMeasurement内でdbValue/min/avg/maxに加算される)。振動測定
+      // では常に0とする。
+      final calibrationOffset = isVibration
+          ? 0.0
+          : ref.read(calibrationProvider);
       await ref
           .read(measurementProvider.notifier)
           .createMeasurement(
             userId: MeasureScreen.guestUserId,
             projectId: widget.projectId,
+            category: _lastMeasurement!.measurementCategory,
             dbValue: _lastMeasurement!.dbValue,
             dbMin: _lastMeasurement!.dbMin,
             dbAvg: _lastMeasurement!.dbAvg,
@@ -185,6 +287,10 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             calibrationOffset: calibrationOffset,
             peakFrequency: _lastMeasurement!.peakFrequency,
             dominantFrequencies: _lastMeasurement!.dominantFrequencies,
+            vibrationValue: _lastMeasurement!.vibrationValue,
+            vibrationMin: _lastMeasurement!.vibrationMin,
+            vibrationAvg: _lastMeasurement!.vibrationAvg,
+            vibrationMax: _lastMeasurement!.vibrationMax,
           );
 
       if (mounted) {
@@ -226,12 +332,24 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             onPressed: _showGuide,
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: AppStrings.volumeTab),
-            Tab(text: AppStrings.frequencyTab),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(kTextTabBarHeight),
+          // 測定中、および測定後の保存前レビュー中はタブ切り替えを禁止する。
+          // 音量/周波数と振動は別々のサービス(AudioService/VibrationService)
+          // を裏で動かしており、1件の保存は必ずどちらか一方のcategoryに
+          // なるため、録音中や保存前にタブを切り替えると「今どちらを
+          // 測定・保存しようとしているか」が分からなくなってしまう。
+          child: AbsorbPointer(
+            absorbing: _isMeasuring || _lastMeasurement != null,
+            child: TabBar(
+              controller: _tabController,
+              tabs: [
+                Tab(text: AppStrings.volumeTab),
+                Tab(text: AppStrings.frequencyTab),
+                Tab(text: AppStrings.vibrationTab),
+              ],
+            ),
+          ),
         ),
       ),
       body: Column(
@@ -269,7 +387,11 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [_buildVolumeTab(context), _buildFrequencyTab(context)],
+              children: [
+                _buildVolumeTab(context),
+                _buildFrequencyTab(context),
+                _buildVibrationTab(context),
+              ],
             ),
           ),
 
@@ -352,6 +474,10 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                                   _maxDb = 0;
                                   _avgDb = 0;
                                   _currentSpectrum = null;
+                                  _currentVibration = 0;
+                                  _minVibration = 0;
+                                  _avgVibration = 0;
+                                  _maxVibration = 0;
                                   _memoController.clear();
                                   _selectedType = MeasurementType.single;
                                   setState(() {});
@@ -481,6 +607,117 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             FrequencySpectrumWidget(spectrum: _currentSpectrum),
             const SizedBox(height: 16),
             FrequencyDetailsCard(spectrum: _currentSpectrum),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 音量タブの安全/注意/危険のような公的な騒音基準(dB)は無いため、あくまで
+  // 目安の閾値。加速度センサーの生の揺れの大きさ(m/s²、重力除去済み)を
+  // 大まかに色分けするだけで、振動計測の校正された安全基準ではない点に注意。
+  String _vibrationStatusLabel(double magnitude) {
+    if (magnitude < 2.0) return AppStrings.safe;
+    if (magnitude < 5.0) return AppStrings.warning;
+    return AppStrings.danger;
+  }
+
+  Color _vibrationStatusColor(double magnitude) {
+    if (magnitude < 2.0) return safeColor;
+    if (magnitude < 5.0) return warningColor;
+    return dangerColor;
+  }
+
+  Widget _buildVibrationTab(BuildContext context) {
+    final displayMagnitude = _isMeasuring
+        ? _currentVibration
+        : (_lastMeasurement?.vibrationValue ?? 0.0);
+    final statusColor = _vibrationStatusColor(displayMagnitude);
+
+    return SingleChildScrollView(
+      child: Center(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    displayMagnitude.toStringAsFixed(2),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'm/s²',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            if (_isMeasuring || _lastMeasurement != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.circle, size: 10, color: statusColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      _vibrationStatusLabel(displayMagnitude),
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatColumn(
+                        '最小',
+                        '${(_isMeasuring ? _minVibration : _lastMeasurement?.vibrationMin ?? 0.0).toStringAsFixed(2)} m/s²',
+                      ),
+                      _buildStatColumn(
+                        '平均',
+                        '${(_isMeasuring ? _avgVibration : _lastMeasurement?.vibrationAvg ?? 0.0).toStringAsFixed(2)} m/s²',
+                      ),
+                      _buildStatColumn(
+                        '最大',
+                        '${(_isMeasuring ? _maxVibration : _lastMeasurement?.vibrationMax ?? 0.0).toStringAsFixed(2)} m/s²',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
