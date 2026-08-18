@@ -341,6 +341,24 @@ Before App Store/Google Play:
 - 📝 GPS位置情報タグ付け・照度計測は別途対応予定（照度はiOSに環境光センサーへの
   公開APIが無いため、クロスプラットフォームでの実センサー対応に制約がある）
 
-**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定・振動測定機能実装（検証済み）  
+### GPS位置情報タグ付け機能 ✅ **コード実装完了・実位置情報対応** (2026-08-18)
+- ✅ LocationService（`geolocator`パッケージ、実位置情報を使用。振動と同様
+  シミュレーションではない。ネイティブ実装で完結し追加のネイティブコード不要）
+- ✅ MeasureScreen: 保存前レビュー画面に「位置情報を記録する」トグルを追加
+  （既定オフ・任意）。オンの場合のみ保存時に一度だけ現在地を取得（測定中の
+  継続的な位置追跡はしない）
+- ✅ MeasurementModel 拡張（latitude, longitude）
+- ✅ LogsScreen: 位置情報付き測定に座標表示
+- ✅ CSVService: 緯度・経度列を追加
+- ✅ iOS: Info.plistに`NSLocationWhenInUseUsageDescription`追加（必須、
+  無いとクラッシュ）
+- ✅ Android: AndroidManifest.xmlに`ACCESS_FINE_LOCATION`/
+  `ACCESS_COARSE_LOCATION`権限を追加
+- ✅ ユニットテスト3ケース追加（MeasurementModel/CSVService）
+- ✅ **検証済み**: `flutter analyze`（エラー0件）・`flutter test`（48/48合格）
+- ⚠️ 実機での位置情報取得動作確認は未実施（このサンドボックスには実機が無いため）
+- 📝 照度計測は引き続き別途対応予定
+
+**Current Phase**: Phase 7.1 - iOS ビルド環境完成 + 周波数測定・振動測定・GPS位置情報機能実装（検証済み）  
 **Branch**: claude/ios-build-1qfnz9  
 **Next Task**: 開発者環境で `flutter build apk`/`flutter build ios` 実行 + Firebase実認証情報設定 + 振動測定の実機確認

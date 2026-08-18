@@ -2,6 +2,10 @@
     package="com.yourwish.measuretrackers">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- GPS tagging (geolocator) — measurement location is only fetched
+         when the user opts in via the switch on the Measure screen. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:label="MeasureTracker"
         android:name="${applicationName}"

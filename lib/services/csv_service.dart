@@ -29,6 +29,8 @@ class CSVService {
         '振動最小(m/s²)',
         '振動平均(m/s²)',
         '振動最大(m/s²)',
+        '緯度',
+        '経度',
         '測定時間(秒)',
         'メモ',
       ],
@@ -53,6 +55,8 @@ class CSVService {
         isVibration ? (measurement.vibrationMin ?? 0.0).toStringAsFixed(2) : '',
         isVibration ? (measurement.vibrationAvg ?? 0.0).toStringAsFixed(2) : '',
         isVibration ? (measurement.vibrationMax ?? 0.0).toStringAsFixed(2) : '',
+        measurement.latitude?.toStringAsFixed(6) ?? '',
+        measurement.longitude?.toStringAsFixed(6) ?? '',
         (measurement.durationMs / 1000).toStringAsFixed(1),
         measurement.memo ?? '',
       ]);

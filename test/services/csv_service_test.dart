@@ -141,5 +141,45 @@ void main() {
         expect(rows[2], isNot(contains('0.0,0.0,0.0,0.0')));
       },
     );
+
+    test('generateCSV writes latitude/longitude when tagged', () async {
+      final measurements = [
+        MeasurementModel(
+          id: '1',
+          projectId: 'proj1',
+          type: 0,
+          dbValue: 75.0,
+          dbMin: 70.0,
+          dbAvg: 72.5,
+          dbMax: 80.0,
+          durationMs: 5000,
+          timestamp: DateTime(2026, 6, 14, 10, 30),
+          latitude: 35.681236,
+          longitude: 139.767125,
+        ),
+        MeasurementModel(
+          id: '2',
+          projectId: 'proj1',
+          type: 0,
+          dbValue: 68.0,
+          dbMin: 65.0,
+          dbAvg: 67.0,
+          dbMax: 70.0,
+          durationMs: 4000,
+          timestamp: DateTime(2026, 6, 14, 11, 0),
+        ),
+      ];
+
+      final csv = await csvService.generateCSV(
+        measurements: measurements,
+        projectName: 'TestProject',
+      );
+
+      final rows = csv.split('\n');
+      expect(rows[0], contains('緯度'));
+      expect(rows[0], contains('経度'));
+      expect(rows[1], contains('35.681236'));
+      expect(rows[1], contains('139.767125'));
+    });
   });
 }

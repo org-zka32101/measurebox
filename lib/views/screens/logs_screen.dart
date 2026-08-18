@@ -532,6 +532,30 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                                         ),
                                       ),
                                     ),
+                                  if (measurement.hasLocation)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on_outlined,
+                                            size: 14,
+                                            color: textSecondary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${measurement.latitude!.toStringAsFixed(5)}, '
+                                            '${measurement.longitude!.toStringAsFixed(5)}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: textSecondary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),

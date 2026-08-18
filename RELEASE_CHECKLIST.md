@@ -17,6 +17,7 @@
 - [x] Info.plist にマイク権限追加
 - [x] Info.plist に追跡権限追加
 - [x] Info.plist に加速度センサー(振動測定)権限追加
+- [x] Info.plist に位置情報(GPSタグ付け)権限追加
 - [ ] Firebase GoogleService-Info.plist ダウンロード
 - [ ] Xcode 15.0+ インストール確認
 - [ ] CocoaPods インストール確認
@@ -276,6 +277,7 @@
 - [ ] RECORD_AUDIO (マイク)
 - [ ] INTERNET (通信)
 - [ ] ACCESS_NETWORK_STATE (ネットワーク状態)
+- [ ] ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION (GPS位置情報タグ付け、任意機能)
 - [ ] 不要な権限が含まれていないか確認
 
 #### 5.8 審査提出

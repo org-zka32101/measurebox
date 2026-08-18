@@ -165,5 +165,50 @@ void main() {
       expect(measurement.measurementCategory, MeasurementCategory.sound);
       expect(measurement.vibrationValue, isNull);
     });
+
+    test('has no location by default', () {
+      final measurement = MeasurementModel(
+        id: '1',
+        projectId: 'proj1',
+        type: 0,
+        dbValue: 75.0,
+        dbMin: 70.0,
+        dbAvg: 72.5,
+        dbMax: 80.0,
+        durationMs: 5000,
+        timestamp: DateTime(2026, 6, 14),
+      );
+
+      expect(measurement.hasLocation, isFalse);
+      expect(measurement.latitude, isNull);
+      expect(measurement.longitude, isNull);
+    });
+
+    test('toFirestore/fromFirestore round-trips latitude/longitude', () {
+      final measurement = MeasurementModel(
+        id: '1',
+        projectId: 'proj1',
+        type: 0,
+        dbValue: 75.0,
+        dbMin: 70.0,
+        dbAvg: 72.5,
+        dbMax: 80.0,
+        durationMs: 5000,
+        timestamp: DateTime(2026, 6, 14, 10, 30),
+        latitude: 35.681236,
+        longitude: 139.767125,
+      );
+
+      expect(measurement.hasLocation, isTrue);
+
+      final firestore = measurement.toFirestore();
+      expect(firestore['latitude'], equals(35.681236));
+      expect(firestore['longitude'], equals(139.767125));
+
+      final restored = MeasurementModel.fromFirestore(firestore, 'proj1');
+      expect(restored.hasLocation, isTrue);
+      expect(restored.latitude, equals(35.681236));
+      expect(restored.longitude, equals(139.767125));
+    });
   });
 }

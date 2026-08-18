@@ -74,6 +74,15 @@ class MeasurementModel {
   @HiveField(18)
   double? vibrationMax;
 
+  /// Where the measurement was recorded (from LocationService). Both null
+  /// unless the user opted in to location tagging when saving — GPS access
+  /// is never requested implicitly.
+  @HiveField(19)
+  double? latitude;
+
+  @HiveField(20)
+  double? longitude;
+
   MeasurementModel({
     required this.id,
     required this.projectId,
@@ -94,6 +103,8 @@ class MeasurementModel {
     this.vibrationMin,
     this.vibrationAvg,
     this.vibrationMax,
+    this.latitude,
+    this.longitude,
   });
 
   MeasurementType get measurementType =>
@@ -106,6 +117,8 @@ class MeasurementModel {
         0,
         MeasurementCategory.values.length - 1,
       )];
+
+  bool get hasLocation => latitude != null && longitude != null;
 
   MeasurementModel copyWith({
     String? id,
@@ -127,6 +140,8 @@ class MeasurementModel {
     double? vibrationMin,
     double? vibrationAvg,
     double? vibrationMax,
+    double? latitude,
+    double? longitude,
   }) {
     return MeasurementModel(
       id: id ?? this.id,
@@ -148,6 +163,8 @@ class MeasurementModel {
       vibrationMin: vibrationMin ?? this.vibrationMin,
       vibrationAvg: vibrationAvg ?? this.vibrationAvg,
       vibrationMax: vibrationMax ?? this.vibrationMax,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 
@@ -171,6 +188,8 @@ class MeasurementModel {
       'vibration_min': vibrationMin,
       'vibration_avg': vibrationAvg,
       'vibration_max': vibrationMax,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -212,6 +231,8 @@ class MeasurementModel {
       vibrationMin: (data['vibration_min'] as num?)?.toDouble(),
       vibrationAvg: (data['vibration_avg'] as num?)?.toDouble(),
       vibrationMax: (data['vibration_max'] as num?)?.toDouble(),
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
     );
   }
 }

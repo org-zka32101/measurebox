@@ -7,6 +7,7 @@ import '../../models/measurement_model.dart';
 import '../../models/measurement_type.dart';
 import '../../services/audio_service.dart';
 import '../../services/frequency_analysis_service.dart';
+import '../../services/location_service.dart';
 import '../../services/vibration_service.dart';
 import '../../providers/measurement_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -58,6 +59,12 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   // 元々対応済みだったが、実際に値を設定する画面側の導線が無く、
   // 常に単発固定で保存されていた。ここで選択→保存まで繋ぐ。
   MeasurementType _selectedType = MeasurementType.single;
+
+  // 位置情報タグ付け（任意・既定はオフ）。オンの場合のみ保存時に一度だけ
+  // 現在地を取得する（測定中に継続的に位置を追跡することはしない）。
+  final LocationService _locationService = LocationService();
+  bool _tagLocation = false;
+  bool _isFetchingLocation = false;
 
   late TextEditingController _memoController;
 
@@ -264,6 +271,29 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
     final isVibration =
         _lastMeasurement!.measurementCategory == MeasurementCategory.vibration;
 
+    double? latitude;
+    double? longitude;
+    if (_tagLocation) {
+      // 位置情報の取得に失敗した場合は保存自体を中断する。オフにして
+      // 再試行するか、位置情報の許可設定を直してもらう必要があるため、
+      // 位置情報無しでこっそり保存するより、失敗を明示する方が分かりやすい。
+      setState(() => _isFetchingLocation = true);
+      try {
+        final location = await _locationService.getCurrentLocation();
+        latitude = location.latitude;
+        longitude = location.longitude;
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isFetchingLocation = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        }
+        return;
+      }
+      if (mounted) setState(() => _isFetchingLocation = false);
+    }
+
     try {
       // Settings画面で設定したマイク校正オフセットはdB測定にのみ意味を持つ
       // (createMeasurement内でdbValue/min/avg/maxに加算される)。振動測定
@@ -291,6 +321,8 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
             vibrationMin: _lastMeasurement!.vibrationMin,
             vibrationAvg: _lastMeasurement!.vibrationAvg,
             vibrationMax: _lastMeasurement!.vibrationMax,
+            latitude: latitude,
+            longitude: longitude,
           );
 
       if (mounted) {
@@ -461,27 +493,43 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                           ),
                           maxLines: 2,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
+                        // 位置情報タグ付け（任意）。オンにすると保存時に
+                        // 一度だけ現在地を取得して測定に紐づける。
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          value: _tagLocation,
+                          onChanged: _isFetchingLocation
+                              ? null
+                              : (value) => setState(() => _tagLocation = value),
+                          secondary: const Icon(Icons.location_on_outlined),
+                          title: const Text('位置情報を記録する'),
+                          subtitle: const Text('保存時に現在地を取得します'),
+                        ),
+                        const SizedBox(height: 8),
                         // Save/Discard buttons
                         Row(
                           children: [
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () {
-                                  _lastMeasurement = null;
-                                  _currentDb = 0;
-                                  _minDb = 0;
-                                  _maxDb = 0;
-                                  _avgDb = 0;
-                                  _currentSpectrum = null;
-                                  _currentVibration = 0;
-                                  _minVibration = 0;
-                                  _avgVibration = 0;
-                                  _maxVibration = 0;
-                                  _memoController.clear();
-                                  _selectedType = MeasurementType.single;
-                                  setState(() {});
-                                },
+                                onPressed: _isFetchingLocation
+                                    ? null
+                                    : () {
+                                        _lastMeasurement = null;
+                                        _currentDb = 0;
+                                        _minDb = 0;
+                                        _maxDb = 0;
+                                        _avgDb = 0;
+                                        _currentSpectrum = null;
+                                        _currentVibration = 0;
+                                        _minVibration = 0;
+                                        _avgVibration = 0;
+                                        _maxVibration = 0;
+                                        _memoController.clear();
+                                        _selectedType = MeasurementType.single;
+                                        setState(() {});
+                                      },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.grey[400],
                                 ),
@@ -491,8 +539,19 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _saveMeasurement,
-                                child: Text(AppStrings.save),
+                                onPressed: _isFetchingLocation
+                                    ? null
+                                    : _saveMeasurement,
+                                child: _isFetchingLocation
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Text(AppStrings.save),
                               ),
                             ),
                           ],

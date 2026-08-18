@@ -48,6 +48,7 @@ dependencies:
   fl_chart: ^0.65.0
   share_plus: ^13.0.0
   sensors_plus: ^6.0.1
+  geolocator: ^13.0.1
 
 dev_dependencies:
   flutter_test:
