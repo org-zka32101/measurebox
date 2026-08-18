@@ -6,6 +6,8 @@ import '../../constants/colors.dart';
 import '../../models/measurement_model.dart';
 import '../../providers/measurement_provider.dart';
 import '../../providers/comparison_provider.dart';
+import '../../utils/error_messages.dart';
+import '../widgets/error_state_view.dart';
 import '../widgets/measurement_chart.dart';
 
 class ComparisonScreen extends ConsumerStatefulWidget {
@@ -144,7 +146,7 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: $e')),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
     }
@@ -167,6 +169,55 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
       ),
       body: measurementsAsync.when(
         data: (measurements) {
+          if (measurements.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        color: safeColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Icon(
+                        Icons.compare_arrows_rounded,
+                        size: 44,
+                        color: safeColor,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'まだ測定データがありません',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '対策前後を比較するには、まず測定を記録してください',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: textSecondary,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pushNamed(
+                        '/measure',
+                        arguments: widget.projectId,
+                      ),
+                      icon: const Icon(Icons.mic_rounded),
+                      label: Text(AppStrings.startMeasure),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           // Apply date filter
           final filteredMeasurements = measurements.where((m) {
             if (_filterStartDate != null && m.timestamp.isBefore(_filterStartDate!)) return false;
@@ -174,7 +225,13 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
             return true;
           }).toList();
 
-          // Update before/after measurements when selected IDs change
+          // Update before/after measurements when selected IDs change. Track
+          // whether the filter just invalidated a previously-valid selection
+          // so we can tell the user why their comparison disappeared,
+          // instead of silently clearing it.
+          final hadBeforeSelection = _beforeMeasurement != null;
+          final hadAfterSelection = _afterMeasurement != null;
+
           if (_selectedBeforeId != null) {
             try {
               _beforeMeasurement = filteredMeasurements.firstWhere(
@@ -192,6 +249,21 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
             } catch (e) {
               _afterMeasurement = null;
             }
+          }
+
+          final selectionClearedByFilter =
+              (hadBeforeSelection && _beforeMeasurement == null) ||
+                  (hadAfterSelection && _afterMeasurement == null);
+          if (selectionClearedByFilter) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('選択した測定が絞込範囲外になったため、選択が解除されました'),
+                  ),
+                );
+              }
+            });
           }
 
           return SingleChildScrollView(
@@ -280,7 +352,12 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                         isExpanded: true,
                         value: _selectedBeforeId,
                         hint: const Text('対策前の測定を選択'),
-                        items: filteredMeasurements.map((m) {
+                        // 対策後として選択済みの測定は、対策前としては選べない
+                        // ようにする（同じ測定同士を比較して0.0dB/0%の意味の
+                        // ない比較結果が保存されてしまうのを防ぐ）。
+                        items: filteredMeasurements
+                            .where((m) => m.id != _selectedAfterId)
+                            .map((m) {
                           return DropdownMenuItem<String>(
                             value: m.id,
                             child: Text(
@@ -352,7 +429,11 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                         isExpanded: true,
                         value: _selectedAfterId,
                         hint: const Text('対策後の測定を選択'),
-                        items: filteredMeasurements.map((m) {
+                        // 対策前として選択済みの測定は、対策後としては選べない
+                        // ようにする（同上）。
+                        items: filteredMeasurements
+                            .where((m) => m.id != _selectedBeforeId)
+                            .map((m) {
                           return DropdownMenuItem<String>(
                             value: m.id,
                             child: Text(
@@ -400,7 +481,9 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              '改善率: ${((_beforeMeasurement!.dbValue - _afterMeasurement!.dbValue) / _beforeMeasurement!.dbValue * 100).toStringAsFixed(1)}%',
+                              // comparison_provider.dartの永続化時と同じガード:
+                              // dbValueが0の場合はInfinity%/NaN%を表示しない
+                              '改善率: ${(_beforeMeasurement!.dbValue != 0 ? ((_beforeMeasurement!.dbValue - _afterMeasurement!.dbValue) / _beforeMeasurement!.dbValue * 100) : 0.0).toStringAsFixed(1)}%',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],
@@ -468,8 +551,10 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
         loading: () => const Center(
           child: CircularProgressIndicator(),
         ),
-        error: (error, stackTrace) => Center(
-          child: Text('エラー: $error'),
+        error: (error, stackTrace) => ErrorStateView(
+          error: error,
+          onRetry: () => ref
+              .invalidate(measurementsByProjectProvider(widget.projectId)),
         ),
       ),
     );

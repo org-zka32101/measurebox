@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../constants/config.dart';
+import '../../providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -12,16 +13,28 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  // スライダー操作中はローカルstateで即座に描画を更新し、指を離した時点
+  // (onChangeEnd) でHiveへ永続化する。永続化された値はcalibrationProvider
+  // からinitStateで読み込む。
   late double _calibration;
 
   @override
   void initState() {
     super.initState();
-    _calibration = defaultCalibration;
+    _calibration = ref.read(calibrationProvider);
   }
 
   void _handleCalibrationChange(double value) {
     setState(() => _calibration = value);
+  }
+
+  Future<void> _handleCalibrationChangeEnd(double value) async {
+    await ref.read(calibrationProvider.notifier).setCalibration(value);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('マイク感度オフセットを ${value.toStringAsFixed(1)} dB に保存しました')),
+      );
+    }
   }
 
   @override
@@ -128,6 +141,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     max: maxCalibration,
                     divisions: ((maxCalibration - minCalibration) / calibrationStep).toInt(),
                     onChanged: _handleCalibrationChange,
+                    onChangeEnd: _handleCalibrationChangeEnd,
                   ),
                   const SizedBox(height: 8),
                   Row(

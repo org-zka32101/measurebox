@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
+import '../../models/project_model.dart';
 import '../../providers/project_provider.dart';
+import '../widgets/confirm_delete_dialog.dart';
+import '../widgets/error_state_view.dart';
 
 class ProjectDetailScreen extends ConsumerWidget {
   final String projectId;
@@ -122,8 +125,10 @@ class ProjectDetailScreen extends ConsumerWidget {
                 color: safeColor,
                 title: AppStrings.comparison,
                 subtitle: '対策前後を比べます',
-                onTap: () => Navigator.of(context)
-                    .pushNamed('/comparison', arguments: project.id),
+                onTap: () => Navigator.of(context).pushNamed(
+                  '/comparison',
+                  arguments: {'projectId': project.id},
+                ),
               ),
               const SizedBox(height: 12),
               _actionTile(
@@ -142,11 +147,7 @@ class ProjectDetailScreen extends ConsumerWidget {
                 color: dangerColor,
                 title: 'プロジェクトを削除',
                 subtitle: '関連データすべて削除されます',
-                onTap: () => _showDeleteConfirmDialog(context, project.name,
-                    () => ref.read(projectProvider.notifier).deleteProject(
-                          userId: 'guest-user',
-                          projectId: project.id,
-                        )),
+                onTap: () => _handleDeleteProject(context, ref, project),
               ),
             ],
           );
@@ -154,45 +155,49 @@ class ProjectDetailScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(),
         ),
-        error: (error, stackTrace) => Center(
-          child: Text('エラー: $error'),
+        error: (error, stackTrace) => ErrorStateView(
+          error: error,
+          onRetry: () => ref.invalidate(projectByIdProvider(projectId)),
         ),
       ),
     );
   }
 
-  void _showDeleteConfirmDialog(
+  Future<void> _handleDeleteProject(
     BuildContext context,
-    String projectName,
-    VoidCallback onConfirm,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('プロジェクトを削除しますか？'),
-        content: Text(
-          '「$projectName」と関連するすべてのデータが削除されます。\nこの操作は取り消せません。',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('キャンセル'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onConfirm();
-              Navigator.of(context).pop();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: dangerColor,
-            ),
-            child: const Text('削除'),
-          ),
-        ],
-      ),
+    WidgetRef ref,
+    ProjectModel project,
+  ) async {
+    final confirmed = await confirmDeleteProjectDialog(
+      context,
+      projectName: project.name,
     );
+    if (!confirmed) return;
+
+    // 削除完了を待ってから成否をフィードバックする。以前は確認ダイアログを
+    // 閉じた瞬間に削除を投げっぱなしで即座にHomeへ戻っていたため、
+    // 削除がFirestore側で失敗しても画面外で握りつぶされていた。
+    await ref.read(projectProvider.notifier).deleteProject(
+          userId: 'guest-user',
+          projectId: project.id,
+        );
+    if (!context.mounted) return;
+
+    final result = ref.read(projectProvider);
+    if (result.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('削除に失敗しました。もう一度お試しください。'),
+          backgroundColor: dangerColor,
+        ),
+      );
+      return; // 失敗時は画面に留まり、再試行できるようにする
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('プロジェクトを削除しました')),
+    );
+    Navigator.of(context).pop();
   }
 
   Widget _actionTile(
