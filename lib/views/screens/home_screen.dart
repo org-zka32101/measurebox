@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/strings.dart';
 import '../../constants/colors.dart';
+import '../../models/project_model.dart';
 import '../../providers/project_provider.dart';
 import '../widgets/project_card.dart';
 import '../widgets/new_project_dialog.dart';
@@ -12,11 +13,20 @@ class HomeScreen extends ConsumerWidget {
 
   static const String guestUserId = 'guest-user';
 
-  void _showNewProjectDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showNewProjectDialog(BuildContext context) async {
+    final project = await showDialog<ProjectModel>(
       context: context,
       builder: (context) => const NewProjectDialog(),
     );
+
+    // 作成が成功した場合のみ、そのままプロジェクト詳細へ遷移する
+    // （キャンセル時は project == null なので何もしない）
+    if (project != null && context.mounted) {
+      Navigator.of(context).pushNamed(
+        '/project_detail',
+        arguments: project.id,
+      );
+    }
   }
 
   @override
