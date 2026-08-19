@@ -29,6 +29,7 @@ class AppStrings {
   // Home
   static const String projects = 'プロジェクト';
   static const String newProject = '新規プロジェクト';
+  static const String quickMeasure = '今すぐ測定';
   static const String projectName = 'プロジェクト名';
   static const String projectDescription = '説明（オプション）';
   static const String noProjects = 'プロジェクトがありません';

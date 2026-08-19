@@ -28,6 +28,16 @@ class HomeScreen extends ConsumerWidget {
         title: Text(AppStrings.projects),
         actions: [
           IconButton(
+            icon: const Icon(Icons.graphic_eq_rounded),
+            tooltip: AppStrings.quickMeasure,
+            onPressed: () {
+              // プロジェクト作成を必須にしない導線。ここではプロジェクト
+              // 未指定のまま測定を開始し、保存時に選択/新規作成してもらう
+              // （MeasureScreen 側のプロジェクトピッカー参照）。
+              Navigator.of(context).pushNamed('/measure');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             tooltip: AppStrings.settings,
             onPressed: () {
@@ -87,6 +97,14 @@ class HomeScreen extends ConsumerWidget {
                         icon: const Icon(Icons.add_rounded),
                         label: Text(AppStrings.newProject),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    // プロジェクト作成を必須にしない導線。保存時にプロジェクト
+                    // を選択/新規作成できる（MeasureScreen参照）。
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed('/measure'),
+                      child: const Text('プロジェクトを作らず今すぐ測定'),
                     ),
                   ],
                 ),
