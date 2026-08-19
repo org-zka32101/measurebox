@@ -54,14 +54,14 @@ class _NewProjectDialogState extends ConsumerState<NewProjectDialog> {
     try {
       const guestUserId = 'guest-user';
 
-      await ref.read(projectProvider.notifier).createProject(
+      final project = await ref.read(projectProvider.notifier).createProject(
             userId: guestUserId,
             name: name,
             description: description.isEmpty ? null : description,
           );
 
       if (mounted) {
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(project);
       }
     } catch (e) {
       if (mounted) {

@@ -19,17 +19,19 @@ class ProjectNotifier extends StateNotifier<AsyncValue<void>> {
 
   final FirebaseService _firebaseService;
 
-  Future<void> createProject({
+  Future<ProjectModel> createProject({
     required String userId,
     required String name,
     String? description,
   }) async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
+
+    late final ProjectModel project;
+    final result = await AsyncValue.guard(() async {
       final projectId = const Uuid().v4();
       final now = DateTime.now();
 
-      final project = ProjectModel(
+      project = ProjectModel(
         id: projectId,
         userId: userId,
         name: name,
@@ -49,7 +51,17 @@ class ProjectNotifier extends StateNotifier<AsyncValue<void>> {
       for (int i = 0; i < projects.length; i++) {
         await projectsBox.putAt(i, projects[i]);
       }
-    }).then((_) => const AsyncValue.data(null));
+    });
+
+    state = result.hasError
+        ? AsyncValue.error(result.error!, result.stackTrace!)
+        : const AsyncValue.data(null);
+
+    if (result.hasError) {
+      // ignore: only_throw_errors
+      throw result.error!;
+    }
+    return project;
   }
 
   Future<void> deleteProject({
