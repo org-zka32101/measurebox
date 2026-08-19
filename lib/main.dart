@@ -60,7 +60,9 @@ class MyApp extends ConsumerWidget {
           );
         }
         if (settings.name == '/measure') {
-          final projectId = settings.arguments as String;
+          // 引数なし（ホーム画面から直接）の場合はプロジェクト未指定のまま
+          // 測定を開始し、保存時にプロジェクトを選択/新規作成してもらう。
+          final projectId = settings.arguments as String?;
           return MaterialPageRoute(
             builder: (_) => MeasureScreen(projectId: projectId),
           );

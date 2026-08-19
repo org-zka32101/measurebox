@@ -11,19 +11,26 @@ import '../../services/frequency_analysis_service.dart';
 import '../../services/illuminance_service.dart';
 import '../../services/location_service.dart';
 import '../../services/vibration_service.dart';
+import '../../models/project_model.dart';
 import '../../providers/measurement_provider.dart';
+import '../../providers/project_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../utils/error_messages.dart';
 import '../widgets/decibel_gauge.dart';
 import '../widgets/frequency_spectrum_widget.dart';
 import '../widgets/frequency_details_card.dart';
+import '../widgets/new_project_dialog.dart';
 
 class MeasureScreen extends ConsumerStatefulWidget {
   static const String guestUserId = 'guest-user';
 
-  final String projectId;
+  // null の場合はプロジェクト未指定のまま測定を開始し、保存時に
+  // プロジェクトを選択/新規作成してもらう（ホーム画面から直接測定を
+  // 開始した場合）。既存のプロジェクト詳細/比較画面からの遷移では
+  // 従来通り指定済みで、その場合はピッカーを表示しない。
+  final String? projectId;
 
-  const MeasureScreen({super.key, required this.projectId});
+  const MeasureScreen({super.key, this.projectId});
 
   @override
   ConsumerState<MeasureScreen> createState() => _MeasureScreenState();
@@ -81,11 +88,18 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
   bool _tagLocation = false;
   bool _isFetchingLocation = false;
 
+  // 保存先プロジェクト。widget.projectId が指定されていればそれを既定で
+  // 使う（既存のプロジェクト詳細/比較画面からの遷移）。未指定の場合は
+  // 保存前レビュー画面でユーザーに選択/新規作成してもらう。
+  String? _selectedProjectId;
+  bool get _needsProjectPicker => widget.projectId == null;
+
   late TextEditingController _memoController;
 
   @override
   void initState() {
     super.initState();
+    _selectedProjectId = widget.projectId;
     _audioService = AudioService();
     _vibrationService = VibrationService();
     _illuminanceService = IlluminanceService();
@@ -259,7 +273,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
 
         _lastMeasurement = MeasurementModel(
           id: '',
-          projectId: widget.projectId,
+          // プロジェクトは保存時に選択するため、ここではプレースホルダ
+          // （実際の保存では _selectedProjectId を使う。下記参照）。
+          projectId: widget.projectId ?? '',
           type: 0,
           category: MeasurementCategory.illuminance.index,
           // dB系フィールドはこのカテゴリでは使わないプレースホルダ
@@ -298,7 +314,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
 
         _lastMeasurement = MeasurementModel(
           id: '',
-          projectId: widget.projectId,
+          // プロジェクトは保存時に選択するため、ここではプレースホルダ
+          // （実際の保存では _selectedProjectId を使う。下記参照）。
+          projectId: widget.projectId ?? '',
           type: 0,
           category: MeasurementCategory.vibration.index,
           // dB系フィールドはこのカテゴリでは使わないプレースホルダ
@@ -341,7 +359,9 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
 
       _lastMeasurement = MeasurementModel(
         id: '',
-        projectId: widget.projectId,
+        // プロジェクトは保存時に選択するため、ここではプレースホルダ
+        // （実際の保存では _selectedProjectId を使う。下記参照）。
+        projectId: widget.projectId ?? '',
         type: 0,
         category: MeasurementCategory.sound.index,
         dbValue: _currentDb,
@@ -369,6 +389,14 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
 
   Future<void> _saveMeasurement() async {
     if (_lastMeasurement == null) return;
+
+    final selectedProjectId = _selectedProjectId;
+    if (selectedProjectId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('保存するプロジェクトを選択してください')));
+      return;
+    }
 
     final isSound =
         _lastMeasurement!.measurementCategory == MeasurementCategory.sound;
@@ -405,7 +433,7 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
           .read(measurementProvider.notifier)
           .createMeasurement(
             userId: MeasureScreen.guestUserId,
-            projectId: widget.projectId,
+            projectId: selectedProjectId,
             category: _lastMeasurement!.measurementCategory,
             dbValue: _lastMeasurement!.dbValue,
             dbMin: _lastMeasurement!.dbMin,
@@ -443,6 +471,120 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
       }
     }
   }
+
+  // 保存先プロジェクトの選択欄（_needsProjectPickerがtrueの時のみ表示）。
+  // 選択済みプロジェクト名は projectByIdProvider から取得する。
+  Widget _buildProjectPickerTile(BuildContext context) {
+    final selectedId = _selectedProjectId;
+    final projectName = selectedId == null
+        ? null
+        : ref
+              .watch(projectByIdProvider(selectedId))
+              .maybeWhen(data: (project) => project?.name, orElse: () => null);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: const Icon(Icons.folder_outlined),
+        title: Text(projectName ?? 'プロジェクトを選択してください'),
+        subtitle: const Text('保存先プロジェクト'),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: _pickProject,
+      ),
+    );
+  }
+
+  // プロジェクト選択用のボトムシート。既存プロジェクトの一覧に加え、
+  // 「新規プロジェクトを作成」からその場でNewProjectDialogを開ける
+  // （測定フローを中断してホームに戻る必要が無いようにするため）。
+  Future<void> _pickProject() async {
+    final projects = ref.read(projectsStreamProvider).value ?? [];
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: greyLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '保存先プロジェクト',
+                    style: Theme.of(sheetContext).textTheme.titleMedium,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final project in projects)
+                      ListTile(
+                        leading: Icon(
+                          project.id == _selectedProjectId
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: primaryColor,
+                        ),
+                        title: Text(project.name),
+                        onTap: () => Navigator.of(sheetContext).pop(
+                          project.id,
+                        ),
+                      ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.add_rounded,
+                        color: primaryColor,
+                      ),
+                      title: const Text('新規プロジェクトを作成'),
+                      onTap: () => Navigator.of(
+                        sheetContext,
+                      ).pop(_newProjectSentinel),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!mounted || selected == null) return;
+
+    if (selected == _newProjectSentinel) {
+      final created = await showDialog<ProjectModel>(
+        context: context,
+        builder: (context) => const NewProjectDialog(),
+      );
+      if (created != null && mounted) {
+        setState(() => _selectedProjectId = created.id);
+      }
+      return;
+    }
+
+    setState(() => _selectedProjectId = selected);
+  }
+
+  static const String _newProjectSentinel = '__new_project__';
 
   String _statusLabel(double db) {
     if (db < 70) return AppStrings.safe;
@@ -559,6 +701,12 @@ class _MeasureScreenState extends ConsumerState<MeasureScreen>
                       ),
                       if (_lastMeasurement != null) ...[
                         const SizedBox(height: 16),
+                        // プロジェクト未指定で測定を開始した場合のみ、保存前
+                        // レビューでプロジェクトを選択/新規作成してもらう。
+                        if (_needsProjectPicker) ...[
+                          _buildProjectPickerTile(context),
+                          const SizedBox(height: 16),
+                        ],
                         // 対策前後比較用のタグ付け（任意・既定は単発）
                         Align(
                           alignment: Alignment.centerLeft,
