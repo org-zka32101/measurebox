@@ -2,6 +2,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/project_model.dart';
 import '../services/firebase_service.dart';
+import '../services/guest_auth_service.dart';
 import '../services/hive_service.dart';
 
 final projectServiceProvider = Provider((ref) => FirebaseService());
@@ -9,8 +10,11 @@ final projectServiceProvider = Provider((ref) => FirebaseService());
 final projectsStreamProvider = StreamProvider<List<ProjectModel>>((ref) {
   final firebaseService = ref.watch(projectServiceProvider);
 
-  // ゲストモード：'guest-user' で直接アクセス
-  const guestUserId = 'guest-user';
+  // ゲストモード：匿名認証のuidで直接アクセス（GuestAuthServiceの
+  // ドキュメント参照）。起動時のサインインに失敗している場合は
+  // （オフライン等）同期を諦め、空リストを返す。
+  final guestUserId = GuestAuthService.currentUserId;
+  if (guestUserId == null) return Stream.value(const []);
   return firebaseService.streamProjects(guestUserId);
 });
 

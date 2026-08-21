@@ -4,6 +4,7 @@ import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../models/project_model.dart';
 import '../../providers/project_provider.dart';
+import '../../services/guest_auth_service.dart';
 import '../widgets/confirm_delete_dialog.dart';
 import '../widgets/error_state_view.dart';
 
@@ -178,7 +179,8 @@ class ProjectDetailScreen extends ConsumerWidget {
     // 閉じた瞬間に削除を投げっぱなしで即座にHomeへ戻っていたため、
     // 削除がFirestore側で失敗しても画面外で握りつぶされていた。
     await ref.read(projectProvider.notifier).deleteProject(
-          userId: 'guest-user',
+          // 匿名認証のuid（GuestAuthServiceのドキュメント参照）。
+          userId: GuestAuthService.currentUserId ?? '',
           projectId: project.id,
         );
     if (!context.mounted) return;

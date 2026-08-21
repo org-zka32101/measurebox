@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/comparison_model.dart';
 import '../models/measurement_model.dart';
 import '../services/firebase_service.dart';
+import '../services/guest_auth_service.dart';
 
 final comparisonServiceProvider = Provider((ref) => FirebaseService());
 
@@ -10,8 +11,11 @@ final comparisonsByProjectProvider =
     StreamProvider.family<List<ComparisonModel>, String>((ref, projectId) {
   final firebaseService = ref.watch(comparisonServiceProvider);
 
-  // ゲストモード：'guest-user' で直接アクセス
-  const guestUserId = 'guest-user';
+  // ゲストモード：匿名認証のuidで直接アクセス（GuestAuthServiceの
+  // ドキュメント参照）。起動時のサインインに失敗している場合は
+  // （オフライン等）同期を諦め、空リストを返す。
+  final guestUserId = GuestAuthService.currentUserId;
+  if (guestUserId == null) return Stream.value(const []);
   return firebaseService.streamComparisons(guestUserId, projectId);
 });
 

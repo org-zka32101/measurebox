@@ -9,12 +9,15 @@ import '../../models/measurement_model.dart';
 import '../../models/measurement_type.dart';
 import '../../providers/measurement_provider.dart';
 import '../../services/csv_service.dart';
+import '../../services/guest_auth_service.dart';
 import '../../utils/error_messages.dart';
 import '../widgets/error_state_view.dart';
 import '../widgets/measurement_chart.dart';
 
 class LogsScreen extends ConsumerStatefulWidget {
-  static const String guestUserId = 'guest-user';
+  // 匿名認証のuid（GuestAuthServiceのドキュメント参照）。旧固定文字列
+  // 'guest-user' はユーザー間でデータが分離されない問題があったため廃止。
+  static String get guestUserId => GuestAuthService.currentUserId ?? '';
 
   final String projectId;
 

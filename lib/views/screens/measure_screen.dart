@@ -10,6 +10,7 @@ import '../../services/audio_service.dart';
 import '../../services/frequency_analysis_service.dart';
 import '../../services/illuminance_service.dart';
 import '../../services/location_service.dart';
+import '../../services/guest_auth_service.dart';
 import '../../services/vibration_service.dart';
 import '../../models/project_model.dart';
 import '../../providers/measurement_provider.dart';
@@ -22,7 +23,9 @@ import '../widgets/frequency_details_card.dart';
 import '../widgets/new_project_dialog.dart';
 
 class MeasureScreen extends ConsumerStatefulWidget {
-  static const String guestUserId = 'guest-user';
+  // 匿名認証のuid（GuestAuthServiceのドキュメント参照）。旧固定文字列
+  // 'guest-user' はユーザー間でデータが分離されない問題があったため廃止。
+  static String get guestUserId => GuestAuthService.currentUserId ?? '';
 
   // null の場合はプロジェクト未指定のまま測定を開始し、保存時に
   // プロジェクトを選択/新規作成してもらう（ホーム画面から直接測定を

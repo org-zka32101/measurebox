@@ -4,6 +4,7 @@ import '../../constants/strings.dart';
 import '../../constants/colors.dart';
 import '../../models/project_model.dart';
 import '../../providers/project_provider.dart';
+import '../../services/guest_auth_service.dart';
 import '../widgets/project_card.dart';
 import '../widgets/new_project_dialog.dart';
 import '../widgets/error_state_view.dart';
@@ -11,7 +12,9 @@ import '../widgets/error_state_view.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  static const String guestUserId = 'guest-user';
+  // 匿名認証のuid（GuestAuthServiceのドキュメント参照）。旧固定文字列
+  // 'guest-user' はユーザー間でデータが分離されない問題があったため廃止。
+  static String get guestUserId => GuestAuthService.currentUserId ?? '';
 
   Future<void> _showNewProjectDialog(BuildContext context) async {
     final project = await showDialog<ProjectModel>(

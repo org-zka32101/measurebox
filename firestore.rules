@@ -1,21 +1,31 @@
 rules_version = '2';
 
+// このアプリはログイン画面を持たない「ゲストモード」だが、起動時に
+// Firebase匿名認証でサインインし、そのuidをユーザーIDとして使う
+// （lib/services/guest_auth_service.dart 参照）。そのため各インストール
+// は一意なFirebase Auth uidを持ち、以下のルールで自分の
+// /users/{uid}/... 以下にしかアクセスできない。
+//
+// 以前は固定文字列 'guest-user' を全インストール共通のユーザーIDとして
+// 使っており、request.auth.uid == 'guest-user' を許可していたが、これは
+// 未認証（request.auth == null）でも文字列としては一致しうる抜け穴が
+// あり、かつ全ユーザーが同じパスを共有するためデータが分離されない
+// 問題があった。匿名認証の導入によりこの抜け穴を廃止した。
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Ust projects collection
+    // Projects collection
     match /users/{userId}/projects/{projectId} {
-      // Allow guest user to read, write, delete their own projects
-      allow read, write, delete: if request.auth.uid == 'guest-user' || request.auth.uid == userId;
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Users' measurements
     match /users/{userId}/projects/{projectId}/measurements/{measurementId} {
-      allow read, write, delete: if request.auth.uid == 'guest-user' || request.auth.uid == userId;
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Users' comparisons
     match /users/{userId}/projects/{projectId}/comparisons/{comparisonId} {
-      allow read, write, delete: if request.auth.uid == 'guest-user' || request.auth.uid == userId;
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Default deny all other access

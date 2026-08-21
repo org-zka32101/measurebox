@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/strings.dart';
 import '../../providers/project_provider.dart';
+import '../../services/guest_auth_service.dart';
 
 class NewProjectDialog extends ConsumerStatefulWidget {
   const NewProjectDialog({super.key});
@@ -52,7 +53,8 @@ class _NewProjectDialogState extends ConsumerState<NewProjectDialog> {
     setState(() => _isLoading = true);
 
     try {
-      const guestUserId = 'guest-user';
+      // 匿名認証のuid（GuestAuthServiceのドキュメント参照）。
+      final guestUserId = GuestAuthService.currentUserId ?? '';
 
       final project = await ref.read(projectProvider.notifier).createProject(
             userId: guestUserId,
