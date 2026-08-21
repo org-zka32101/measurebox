@@ -4,6 +4,7 @@ import '../models/measurement_category.dart';
 import '../models/measurement_model.dart';
 import '../models/measurement_type.dart';
 import '../services/firebase_service.dart';
+import '../services/guest_auth_service.dart';
 
 final measurementServiceProvider = Provider((ref) => FirebaseService());
 
@@ -11,8 +12,11 @@ final measurementsByProjectProvider =
     StreamProvider.family<List<MeasurementModel>, String>((ref, projectId) {
       final firebaseService = ref.watch(measurementServiceProvider);
 
-      // ゲストモード：'guest-user' で直接アクセス
-      const guestUserId = 'guest-user';
+      // ゲストモード：匿名認証のuidで直接アクセス（GuestAuthServiceの
+      // ドキュメント参照）。起動時のサインインに失敗している場合は
+      // （オフライン等）同期を諦め、空リストを返す。
+      final guestUserId = GuestAuthService.currentUserId;
+      if (guestUserId == null) return Stream.value(const []);
       return firebaseService.streamMeasurements(guestUserId, projectId);
     });
 

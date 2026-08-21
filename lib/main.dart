@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'firebase_options.dart';
 import 'constants/theme.dart';
 import 'constants/strings.dart';
+import 'services/guest_auth_service.dart';
 import 'services/hive_service.dart';
 import 'views/screens/home_screen.dart';
 import 'views/screens/project_detail_screen.dart';
@@ -28,6 +29,12 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('Firebase initialized successfully');
+
+    // ゲストモード用の匿名認証（GuestAuthServiceのドキュメント参照）。
+    // Firestoreのセキュリティルールでユーザーごとにデータを分離するため、
+    // ログイン画面を追加せずここで一度だけサインインする。
+    final uid = await GuestAuthService.ensureSignedIn();
+    print('匿名認証 完了: uid=$uid');
   } catch (e) {
     print('Firebase initialization error: $e');
   }
